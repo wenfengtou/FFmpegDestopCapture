@@ -23,6 +23,126 @@ extern "C" {
 #include <tchar.h>
 
 
+
+static int video_decode_example(const char* input_filename)
+{
+	AVFormatContext *avFormatContext = NULL;
+	AVInputFormat avInputFormat;
+	AVCodecContext *avCodecContext = NULL;
+	AVCodec *avCodec;
+	int ret;
+	AVCodecParameters* avCodecParameters;
+
+	AVPacket* avPackage;
+	AVFrame *avFrame;
+	AVFrame *yuvFrame;
+
+	ret = avformat_open_input(&avFormatContext, input_filename, NULL, NULL);
+	if (ret != 0)
+	{
+		printf("avformat_open_input fail\n");
+		return -1;
+	}
+
+	ret = avformat_find_stream_info(avFormatContext, NULL);
+	if (ret < 0)
+	{
+		printf("avformat_find_stream_info fail\n");
+		return -1;
+	}
+
+	int videoIndex = av_find_best_stream(avFormatContext,
+		AVMEDIA_TYPE_VIDEO,
+		-1,
+		-1,
+		NULL,
+		0);
+
+	if (videoIndex < 0) {
+		printf("get videoIndex fail\n");
+		return -1;
+	}
+	avCodecParameters = avFormatContext->streams[videoIndex]->codecpar;
+	avCodec = avcodec_find_decoder(avCodecParameters->codec_id);
+
+	if (avCodec == NULL){
+		printf("avCodec fail\n");
+		return -1;
+	}
+
+	avCodecContext = avcodec_alloc_context3(avCodec);
+
+	if (avCodecContext == NULL) {
+		printf("avCodecContext fail\n");
+		return -1;
+	}
+
+	ret = avcodec_parameters_to_context(avCodecContext, avCodecParameters);
+
+	if (ret < 0) {
+		printf("avcodec_parameters_to_context fail\n");
+		return -1;
+	}
+	avcodec_open2(avCodecContext, avCodec, NULL);
+
+
+	//avFormatContext->video_codec->name
+	avPackage = av_packet_alloc();
+	if (avPackage == NULL) {
+		printf("avPackage fail\n");
+		return -1;
+	}
+
+	struct SwsContext* imgCtx = sws_getContext(avCodecContext->width, avCodecContext->height, avCodecContext->pix_fmt, avCodecContext->width, avCodecContext->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+
+	avFrame = av_frame_alloc();
+	yuvFrame = av_frame_alloc();
+	if (avFrame == NULL) {
+		printf("avFrame fail\n");
+		return -1;
+	}
+	int bufSize = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, avCodecContext->width, avCodecContext->height, 1);
+	uint8_t* buf = (uint8_t*)av_malloc(bufSize);
+	av_image_fill_arrays(yuvFrame->data, yuvFrame->linesize, buf, AV_PIX_FMT_YUV420P, avCodecContext->width, avCodecContext->height, 1);
+	ret = 0;
+	int i = 0;
+	FILE* fp_yuv = fopen("test_out.yuv", "wb+");
+	while (ret >= 0) {
+		ret = av_read_frame(avFormatContext, avPackage);
+		if (ret < 0) {
+			avcodec_send_packet(avCodecContext, NULL);
+		} else {
+			if (avPackage->pts == AV_NOPTS_VALUE) {
+				avPackage->pts = avPackage->dts = i;
+			}
+			avcodec_send_packet(avCodecContext, avPackage);
+		}
+		av_packet_unref(avPackage);
+		while (ret >= 0) {
+			ret = avcodec_receive_frame(avCodecContext, avFrame);
+			if (ret == AVERROR_EOF) {
+				return -1;
+			} else if (ret == AVERROR(EAGAIN)) {
+				ret = 0;
+				break;
+			} else if (ret < 0) {
+				printf("avFrame pts = %lld\n", avFrame->pts);
+				return ret;
+			}
+			printf("avFrame pts = %lld\n", avFrame->pts);
+			sws_scale(imgCtx, avFrame->data, avFrame->linesize, 0, avCodecContext->height, yuvFrame->data, yuvFrame->linesize);
+			int y_size = avCodecContext->width * avCodecContext->height;
+			fwrite(yuvFrame->data[0], 1, y_size, fp_yuv);		// Y 
+			fwrite(yuvFrame->data[1], 1, y_size / 4, fp_yuv);	// U
+			fwrite(yuvFrame->data[2], 1, y_size / 4, fp_yuv);	// V
+			av_frame_unref(avFrame);
+		}
+		i++;
+	}
+	fclose(fp_yuv);// 非常重要
+	return 1;
+}
+
 //win32显示
 static void Show(HWND hwnd, unsigned char* rgb, int w, int h, bool fill)
 {
@@ -214,6 +334,10 @@ static LRESULT CALLBACK WinProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lpar
 int main()
 {
 	printf("ok：%d\n", avcodec_version());
+	video_decode_example("nature.h264");
+	if (true) {
+		return 1;
+	}
 	avdevice_register_all();
 
 
