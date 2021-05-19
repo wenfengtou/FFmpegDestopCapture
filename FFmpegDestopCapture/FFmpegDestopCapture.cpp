@@ -43,7 +43,7 @@ static int sdl_play() {
 	SDL_Renderer* renderer = NULL;
 	SDL_Texture* texture = NULL;
 	struct SwsContext* swsContext = NULL;
-	AVPixelFormat targetFormat = AV_PIX_FMT_YUV420P;
+	AVPixelFormat targetFormat = AV_PIX_FMT_RGB24;
 
 	int imageSize = 0;
 
@@ -135,7 +135,7 @@ static int sdl_play() {
 	//	goto __FAIL;
 	//}
 
-	pixformat = SDL_PIXELFORMAT_NV21;//YUV格式
+	pixformat = SDL_PIXELFORMAT_RGB24;//YUV格式
 	// 创建纹理
 	texture = SDL_CreateTexture(renderer,
 		pixformat,
@@ -152,9 +152,9 @@ static int sdl_play() {
 			while (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
 
 				sws_scale(swsContext, pFrame->data, pFrame->linesize, 0, pCodecCtx->height, nvFrame->data, nvFrame->linesize);
-				uint8_t *buf = (uint8_t*)av_malloc(pCodecCtx->height * pCodecCtx->width + pCodecCtx->height * pCodecCtx->width/2);
-				memcpy(buf, nvFrame->data[0], pCodecCtx->height * pCodecCtx->width);
-				memcpy(buf + pCodecCtx->height * pCodecCtx->width, nvFrame->data[1], pCodecCtx->height* pCodecCtx->width / 2);
+				//uint8_t *buf = (uint8_t*)av_malloc(pCodecCtx->height * pCodecCtx->width + pCodecCtx->height * pCodecCtx->width/2);
+				//memcpy(buf, nvFrame->data[0], pCodecCtx->height * pCodecCtx->width);
+				//memcpy(buf + pCodecCtx->height * pCodecCtx->width, nvFrame->data[1], pCodecCtx->height* pCodecCtx->width / 2);
 
 				//SDL_UpdateYUVTexture(texture, NULL,
 				//	pFrame->data[0], pFrame->linesize[0],
@@ -174,7 +174,7 @@ static int sdl_play() {
 
 				SDL_UpdateTexture(texture,
 					&rect,
-					buf, pCodecCtx->width);
+					nvFrame->data[0], nvFrame->linesize[0]);
 				//展示
 				SDL_RenderClear(renderer);
 				SDL_RenderCopy(renderer, texture, NULL, &rect);
