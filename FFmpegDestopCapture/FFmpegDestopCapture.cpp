@@ -52,15 +52,19 @@ static int sdl_play() {
 	int w_width = 640;
 	int w_height = 480;
 
+	
 	//SDL初始化
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL - %s\n", SDL_GetError());
 		return ret;
 	}
-
-
+	//pFormatCtx = avformat_alloc_context();
+	AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
+	AVDictionary* options = NULL;
+	//av_dict_set(&options, "video_size","1920*1080",0);//大小  默认全部
+	av_dict_set(&options, "framerate", "15", 0);//帧lu
 	// 打开输入文件
-	if (avformat_open_input(&pFormatCtx, "rtsp://127.0.0.1:8554/1", NULL, NULL) != 0) {
+	if (avformat_open_input(&pFormatCtx, "desktop", ifmt, &options) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
 		goto __FAIL;
 	}
@@ -562,11 +566,11 @@ int main()
 {
 	printf("ok：%d\n", avcodec_version());
 	//video_decode_example("nature.h264");
+	avdevice_register_all();
 	sdl_play();
 	if (true) {
 		return 1;
 	}
-	avdevice_register_all();
 
 
 	HINSTANCE hInstance;
