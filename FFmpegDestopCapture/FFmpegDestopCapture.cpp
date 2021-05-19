@@ -60,7 +60,7 @@ static int sdl_play() {
 
 
 	// 打开输入文件
-	if (avformat_open_input(&pFormatCtx, file, NULL, NULL) != 0) {
+	if (avformat_open_input(&pFormatCtx, "rtsp://127.0.0.1:8554/1", NULL, NULL) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
 		goto __FAIL;
 	}
