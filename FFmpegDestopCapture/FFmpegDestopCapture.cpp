@@ -12,6 +12,7 @@ extern "C" {
 #include "libavutil/channel_layout.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
+#include "SDL.h"
 }
 #define WIN32_LEAN_AND_MEAN             // 从 Windows 头文件中排除极少使用的内容
 // Windows 头文件
@@ -23,6 +24,231 @@ extern "C" {
 #include <tchar.h>
 
 
+static int sdl_play() {
+	int ret = -1;
+	const char* file = "test.mp4";
+
+	AVFormatContext* pFormatCtx = NULL;
+	int i, videoStream;
+	AVCodecParameters* pCodecParameters = NULL;
+	AVCodecContext* pCodecCtx = NULL;
+	AVCodec* pCodec = NULL;
+	AVFrame* pFrame = NULL;
+	AVFrame* nvFrame = NULL;
+	AVPacket packet;
+
+	SDL_Rect rect;
+	Uint32 pixformat;
+	SDL_Window* win = NULL;
+	SDL_Renderer* renderer = NULL;
+	SDL_Texture* texture = NULL;
+	struct SwsContext* swsContext = NULL;
+	AVPixelFormat targetFormat = AV_PIX_FMT_YUV420P;
+
+	int imageSize = 0;
+
+	uint8_t* buf = NULL;
+	//默认窗口大小
+	int w_width = 640;
+	int w_height = 480;
+
+	//SDL初始化
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL - %s\n", SDL_GetError());
+		return ret;
+	}
+
+
+	// 打开输入文件
+	if (avformat_open_input(&pFormatCtx, file, NULL, NULL) != 0) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
+		goto __FAIL;
+	}
+
+	if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't avformat_find_stream_info!");
+		goto __FAIL;
+	}
+	//找到视频流
+	videoStream = av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+	if (videoStream == -1) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Din't find a video stream!");
+		goto __FAIL;// Didn't find a video stream
+	}
+
+	// 流参数
+	pCodecParameters = pFormatCtx->streams[videoStream]->codecpar;
+
+	//获取解码器
+	pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
+	if (pCodec == NULL) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unsupported codec!\n");
+		goto __FAIL; // Codec not found
+	}
+
+	// 初始化一个编解码上下文
+	pCodecCtx = avcodec_alloc_context3(pCodec);
+	if (avcodec_parameters_to_context(pCodecCtx, pCodecParameters) != 0) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't copy codec context");
+		goto __FAIL;// Error copying codec context
+	}
+
+	// 打开解码器
+	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to open decoder!\n");
+		goto __FAIL; // Could not open codec
+	}
+
+	// Allocate video frame
+	pFrame = av_frame_alloc();
+	nvFrame = av_frame_alloc();
+
+
+	imageSize = av_image_get_buffer_size(targetFormat, pCodecCtx->width, pCodecCtx->height, 1);
+
+	buf = (uint8_t*)av_malloc(imageSize);
+	av_image_fill_arrays(nvFrame->data, nvFrame->linesize, buf, targetFormat, pCodecCtx->width, pCodecCtx->height, 1);
+
+	w_width = pCodecCtx->width;
+	w_height = pCodecCtx->height;
+
+	win = SDL_CreateWindow("wenfeng sdl win", 100, 100, 600, 600, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
+	////创建窗口
+	//win = SDL_CreateWindow("Media Player",
+	//	SDL_WINDOWPOS_UNDEFINED,
+	//	SDL_WINDOWPOS_UNDEFINED,
+	//	w_width, w_height,
+	//	SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	//if (!win) {
+	//	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create window by SDL");
+	//	goto __FAIL;
+	//}
+
+
+	//创建渲染器
+	swsContext = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height, targetFormat, SWS_BICUBIC, NULL, NULL, NULL);
+
+	renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
+	//renderer = SDL_CreateRenderer(win, -1, 0);
+	//if (!renderer) {
+	//	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create Renderer by SDL");
+	//	goto __FAIL;
+	//}
+
+	pixformat = SDL_PIXELFORMAT_NV21;//YUV格式
+	// 创建纹理
+	texture = SDL_CreateTexture(renderer,
+		pixformat,
+		SDL_TEXTUREACCESS_STREAMING,
+		w_width,
+		w_height);
+
+
+	//读取数据
+	while (av_read_frame(pFormatCtx, &packet) >= 0) {
+		if (packet.stream_index == videoStream) {
+			//解码
+			avcodec_send_packet(pCodecCtx, &packet);
+			while (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
+
+				sws_scale(swsContext, pFrame->data, pFrame->linesize, 0, pCodecCtx->height, nvFrame->data, nvFrame->linesize);
+				uint8_t *buf = (uint8_t*)av_malloc(pCodecCtx->height * pCodecCtx->width + pCodecCtx->height * pCodecCtx->width/2);
+				memcpy(buf, nvFrame->data[0], pCodecCtx->height * pCodecCtx->width);
+				memcpy(buf + pCodecCtx->height * pCodecCtx->width, nvFrame->data[1], pCodecCtx->height* pCodecCtx->width / 2);
+
+				//SDL_UpdateYUVTexture(texture, NULL,
+				//	pFrame->data[0], pFrame->linesize[0],
+				//	pFrame->data[1], pFrame->linesize[1],
+				//	pFrame->data[2], pFrame->linesize[2]);
+
+				//SDL_UpdateYUVTexture(texture, NULL,
+				//	pFrame->data[0], pFrame->linesize[0],
+				//	nvFrame->data[1], 0,
+				//	nvFrame->data[1], 0);
+
+				// Set Size of Window
+				rect.x = 0;
+				rect.y = 0;
+				rect.w = pCodecCtx->width;
+				rect.h = pCodecCtx->height;
+
+				SDL_UpdateTexture(texture,
+					&rect,
+					buf, pCodecCtx->width);
+				//展示
+				SDL_RenderClear(renderer);
+				SDL_RenderCopy(renderer, texture, NULL, &rect);
+				SDL_RenderPresent(renderer);
+			}
+		}
+
+		av_packet_unref(&packet);
+
+		// 事件处理
+		SDL_Event event;
+		SDL_PollEvent(&event);
+		if (event.type == SDL_QUIT) {
+			goto __QUIT;
+		}
+		else if (event.type == SDL_KEYDOWN) {
+			goto __QUIT;
+		}
+		else {
+			int a = 10;
+		}
+
+		
+		//SDL_Event event;
+		//SDL_PollEvent(&event);
+		//switch (event.type) {
+		//case SDL_QUIT:
+		//	goto __QUIT;
+		//default:
+		//	break;
+		//}
+
+
+	}
+
+__QUIT:
+	ret = 0;
+
+__FAIL:
+	// Free the YUV frame
+	if (pFrame) {
+		av_frame_free(&pFrame);
+	}
+
+	// Close the codec
+	if (pCodecCtx) {
+		avcodec_close(pCodecCtx);
+	}
+
+	if (pCodecParameters) {
+		avcodec_parameters_free(&pCodecParameters);
+	}
+
+	// Close the video file
+	if (pFormatCtx) {
+//		avformat_close_input(&pFormatCtx);
+	}
+
+	if (win) {
+		SDL_DestroyWindow(win);
+	}
+
+	if (renderer) {
+		SDL_DestroyRenderer(renderer);
+	}
+
+	if (texture) {
+		SDL_DestroyTexture(texture);
+	}
+
+	SDL_Quit();
+
+	return ret;
+}
 
 static int video_decode_example(const char* input_filename)
 {
@@ -331,10 +557,12 @@ static LRESULT CALLBACK WinProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lpar
 	return DefWindowProc(hwnd, umsg, wparam, lparam);
 }
 
+#undef main
 int main()
 {
 	printf("ok：%d\n", avcodec_version());
-	video_decode_example("nature.h264");
+	//video_decode_example("nature.h264");
+	sdl_play();
 	if (true) {
 		return 1;
 	}

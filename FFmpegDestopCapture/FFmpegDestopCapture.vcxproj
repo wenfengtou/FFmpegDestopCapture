@@ -72,8 +72,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\work\vcProject\FFmpegDestopCapture\ffmpeg\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\work\vcProject\FFmpegDestopCapture\ffmpeg\bin;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\work\vcProject\FFmpegDestopCapture\SDL2-2.0.14\include;D:\work\vcProject\FFmpegDestopCapture\ffmpeg\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\work\vcProject\FFmpegDestopCapture\SDL2-2.0.14\lib\x86;D:\work\vcProject\FFmpegDestopCapture\ffmpeg\bin;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -94,7 +94,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
