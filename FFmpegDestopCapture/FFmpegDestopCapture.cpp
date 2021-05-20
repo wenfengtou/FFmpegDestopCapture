@@ -32,7 +32,7 @@ static int sdl_play() {
 	int i, videoStream;
 	AVCodecParameters* pCodecParameters = NULL;
 	AVCodecContext* pCodecCtx = NULL;
-	AVCodec* pCodec = NULL;
+	const AVCodec* pCodec = NULL;
 	AVFrame* pFrame = NULL;
 	AVFrame* nvFrame = NULL;
 	AVPacket packet;
@@ -58,17 +58,21 @@ static int sdl_play() {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL - %s\n", SDL_GetError());
 		return ret;
 	}
-	//pFormatCtx = avformat_alloc_context();
-	AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
+
 	AVDictionary* options = NULL;
-	//av_dict_set(&options, "video_size","1920*1080",0);//大小  默认全部
-	av_dict_set(&options, "framerate", "15", 0);//帧lu
+	av_dict_set(&options, "list_devices", "true", 0);
+	const AVInputFormat* ifmt = av_find_input_format("dshow");
+	pFormatCtx = avformat_alloc_context();
+
+	//AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
+	//AVDictionary* options = NULL;
+	//av_dict_set(&options, "framerate", "15", 0);//帧lu
 	// 打开输入文件
-	if (avformat_open_input(&pFormatCtx, "desktop", ifmt, &options) != 0) {
+	if (avformat_open_input(&pFormatCtx, "video=screen-capture-recorder", ifmt, NULL) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
 		goto __FAIL;
 	}
-
+	
 	if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't avformat_find_stream_info!");
 		goto __FAIL;
@@ -259,7 +263,7 @@ static int video_decode_example(const char* input_filename)
 	AVFormatContext *avFormatContext = NULL;
 	AVInputFormat avInputFormat;
 	AVCodecContext *avCodecContext = NULL;
-	AVCodec *avCodec;
+	const AVCodec *avCodec;
 	int ret;
 	AVCodecParameters* avCodecParameters;
 
@@ -470,7 +474,7 @@ static AVFrame* alloc_picture(enum AVPixelFormat pix_fmt, int width, int height)
 
 static int test1() {
 	AVFormatContext* formatCtx = avformat_alloc_context();
-	AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
+	const AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
 	//AVInputFormat *ifmt = av_find_input_format("dshow");//设备类型
 	AVDictionary* options = NULL;
 	//av_dict_set(&options, "video_size","1920*1080",0);//大小  默认全部
@@ -491,7 +495,7 @@ static int test1() {
 		return -1;
 	}
 	//查找解密器
-	AVCodec* codec = avcodec_find_decoder(formatCtx->streams[0]->codecpar->codec_id);
+	const AVCodec* codec = avcodec_find_decoder(formatCtx->streams[0]->codecpar->codec_id);
 	if (codec == NULL) {
 		printf("codec not found\n");
 		return -1;

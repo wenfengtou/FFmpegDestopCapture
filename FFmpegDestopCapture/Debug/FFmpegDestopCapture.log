@@ -1,5 +1,37 @@
-﻿  FFmpegDestopCapture.cpp
-D:\work\vcProject\FFmpegDestopCapture\ffmpeg\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(32,6): warning C4101: “i”: 未引用的局部变量
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(260,16): warning C4101: “avInputFormat”: 未引用的局部变量
-  FFmpegDestopCapture.vcxproj -> D:\work\vcProject\FFmpegDestopCapture\Debug\FFmpegDestopCapture.exe
+﻿FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_malloc，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_dict_set，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_dict_free，函数 "int __cdecl test1(void)" (?test1@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_frame_alloc，函数 "struct AVFrame * __cdecl alloc_picture(enum AVPixelFormat,int,int)" (?alloc_picture@@YAPAUAVFrame@@W4AVPixelFormat@@HH@Z) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_frame_free，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_frame_get_buffer，函数 "struct AVFrame * __cdecl alloc_picture(enum AVPixelFormat,int,int)" (?alloc_picture@@YAPAUAVFrame@@W4AVPixelFormat@@HH@Z) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_parameters_free，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_packet_unref，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_find_decoder，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_version，函数 _main 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_alloc_context3，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_free_context，函数 "int __cdecl test1(void)" (?test1@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_parameters_to_context，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_open2，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_close，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_send_packet，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avcodec_receive_frame，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avformat_alloc_context，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_find_input_format，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avformat_open_input，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avformat_find_stream_info，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_find_best_stream，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_read_frame，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avformat_close_input，函数 "int __cdecl test1(void)" (?test1@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _avdevice_register_all，函数 _main 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_image_fill_arrays，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _av_image_get_buffer_size，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _sws_getContext，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+FFmpegDestopCapture.obj : error LNK2019: 无法解析的外部符号 _sws_scale，函数 "int __cdecl sdl_play(void)" (?sdl_play@@YAHXZ) 中引用了该符号
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg\lib\avcodec.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg\lib\avdevice.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg\lib\avfilter.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg\lib\avformat.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg\lib\avutil.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg\lib\swresample.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg\lib\swscale.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+D:\work\vcProject\FFmpegDestopCapture\Debug\FFmpegDestopCapture.exe : fatal error LNK1120: 29 个无法解析的外部命令
