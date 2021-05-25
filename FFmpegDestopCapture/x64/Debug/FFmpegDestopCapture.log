@@ -1,6 +1,6 @@
 ﻿  FFmpegDestopCapture.cpp
-D:\work\vcProject\FFmpegDestopCapture\ffmpeg64\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(32,6): warning C4101: “i”: 未引用的局部变量
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(264,16): warning C4101: “avInputFormat”: 未引用的局部变量
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(605,49): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-  FFmpegDestopCapture.vcxproj -> D:\work\vcProject\FFmpegDestopCapture\x64\Debug\FFmpegDestopCapture.exe
+D:\work\vs2019_project\FFmpegDestopCapture\ffmpeg64\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+D:\work\vs2019_project\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(62,6): warning C4101: “i”: 未引用的局部变量
+D:\work\vs2019_project\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(294,16): warning C4101: “avInputFormat”: 未引用的局部变量
+D:\work\vs2019_project\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(640,49): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+  FFmpegDestopCapture.vcxproj -> D:\work\vs2019_project\FFmpegDestopCapture\x64\Debug\FFmpegDestopCapture.exe

@@ -98,7 +98,7 @@ static int sdl_play() {
 	//AVDictionary* options = NULL;
 	//av_dict_set(&options, "framerate", "15", 0);//帧lu
 	// 打开输入文件
-	if (avformat_open_input(&pFormatCtx, "video=USB Video Device", ifmt, NULL) != 0) {
+	if (avformat_open_input(&pFormatCtx, "video=Logitech HD Webcam C270", ifmt, NULL) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
 		goto __FAIL;
 	}
@@ -605,8 +605,8 @@ int main()
 	if (!i) {
 		int cc = 10;
 	}
-	//sdl_play();
-	get_pcm_from_mic();
+	sdl_play();
+	//get_pcm_from_mic();
 	if (true) {
 		return 1;
 	}

@@ -80,8 +80,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\work\vcProject\FFmpegDestopCapture\SDL2-2.0.14\include;D:\work\vcProject\FFmpegDestopCapture\ffmpeg64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\work\vcProject\FFmpegDestopCapture\SDL2-2.0.14\lib\x64;D:\work\vcProject\FFmpegDestopCapture\ffmpeg64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\SDL2-2.0.14\include;..\ffmpeg64\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\SDL2-2.0.14\lib\x64;..\ffmpeg64\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
