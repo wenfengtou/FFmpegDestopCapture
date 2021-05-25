@@ -25,6 +25,23 @@ extern "C" {
 #include <string>
 
 
+char* dup_wchar_to_utf8(wchar_t* w)
+
+{
+	char* s = NULL;
+
+	int l = WideCharToMultiByte(CP_UTF8, 0, w, -1, 0, 0, 0, 0);
+
+	s = (char*)av_malloc(l);
+
+	if (s)
+
+		WideCharToMultiByte(CP_UTF8, 0, w, -1, s, l, 0, 0);
+
+	return s;
+
+}
+
 static int get_pcm_from_mic() {
 	int ret = 0;
 	char errors[1024] = { 0, };
@@ -38,19 +55,38 @@ static int get_pcm_from_mic() {
 	av_dict_set(&options, "channels", "1", 0);
 	av_dict_set(&options, "sample_rate", "44100", 0);
 
-
+	const char* out = "./audio.pcm";
+	FILE* outfile = fopen(out, "wb+");
 	//get format
 	const AVInputFormat* iformat = av_find_input_format("dshow");
 
-	std::string device_name = "audio=麦克风 (USB Audio Device)";
+	//std::string device_name = "audio=麦克风 (USB Audio Device)";
 
+	wchar_t w[256] = L"audio=麦克风 (HD Webcam C270)";
+
+	char* fileAudioInput = dup_wchar_to_utf8(w);
 	//std::string device_name_utf8 = std::Ansi(device_name.c_str(), device_name.length());
 	//open device
-	if ((ret = avformat_open_input(&fmt_ctx, device_name.c_str(), iformat, &options)) < 0) {
+	if ((ret = avformat_open_input(&fmt_ctx, fileAudioInput, iformat, NULL)) < 0) {
 		av_strerror(ret, errors, 1024);
 		fprintf(stderr, "Failed to open audio device, [%d]%s\n", ret, errors);
 		return NULL;
 	}
+	AVPacket pkt;
+	//av_init_packet(&pkt);
+	int count = 0;
+	//read data form audio
+	while (ret = (av_read_frame(fmt_ctx, &pkt)) == 0 && count++ < 40) {
+		av_log(NULL, AV_LOG_INFO, "pkt size is %d（%p）, count=%d\n",
+			pkt.size, pkt.data, count);
+		printf("count = %d\n", count);
+		fwrite(pkt.data, 1, pkt.size, outfile);
+		fflush(outfile);
+		av_packet_unref(&pkt);//release pkt
+	}
+
+	fclose(outfile);
+	avformat_close_input(&fmt_ctx);//releas ctx
 
 }
 
@@ -605,8 +641,8 @@ int main()
 	if (!i) {
 		int cc = 10;
 	}
-	sdl_play();
-	//get_pcm_from_mic();
+	//sdl_play();
+	get_pcm_from_mic();
 	if (true) {
 		return 1;
 	}
