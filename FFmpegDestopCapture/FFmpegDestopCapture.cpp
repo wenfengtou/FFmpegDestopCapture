@@ -22,7 +22,37 @@ extern "C" {
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+#include <string>
 
+
+static int get_pcm_from_mic() {
+	int ret = 0;
+	char errors[1024] = { 0, };
+
+	//ctx
+	AVFormatContext* fmt_ctx = NULL;
+	AVDictionary* options = NULL;
+
+
+	av_dict_set(&options, "sample_size", "16", 0);
+	av_dict_set(&options, "channels", "1", 0);
+	av_dict_set(&options, "sample_rate", "44100", 0);
+
+
+	//get format
+	const AVInputFormat* iformat = av_find_input_format("dshow");
+
+	std::string device_name = "audio=麦克风 (USB Audio Device)";
+
+	//std::string device_name_utf8 = std::Ansi(device_name.c_str(), device_name.length());
+	//open device
+	if ((ret = avformat_open_input(&fmt_ctx, device_name.c_str(), iformat, &options)) < 0) {
+		av_strerror(ret, errors, 1024);
+		fprintf(stderr, "Failed to open audio device, [%d]%s\n", ret, errors);
+		return NULL;
+	}
+
+}
 
 static int sdl_play() {
 	int ret = -1;
@@ -68,7 +98,7 @@ static int sdl_play() {
 	//AVDictionary* options = NULL;
 	//av_dict_set(&options, "framerate", "15", 0);//帧lu
 	// 打开输入文件
-	if (avformat_open_input(&pFormatCtx, "video=screen-capture-recorder", ifmt, NULL) != 0) {
+	if (avformat_open_input(&pFormatCtx, "video=USB Video Device", ifmt, NULL) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
 		goto __FAIL;
 	}
@@ -571,7 +601,12 @@ int main()
 	printf("ok：%d\n", avcodec_version());
 	//video_decode_example("nature.h264");
 	avdevice_register_all();
-	sdl_play();
+	int i = 0;
+	if (!i) {
+		int cc = 10;
+	}
+	//sdl_play();
+	get_pcm_from_mic();
 	if (true) {
 		return 1;
 	}
