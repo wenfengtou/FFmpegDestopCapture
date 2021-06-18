@@ -1,6 +1,3 @@
-
-
-
 extern "C" {
 #include "libavcodec/avcodec.h" 
 #include "libavformat/avformat.h"
@@ -24,8 +21,6 @@ extern "C" {
 #include <tchar.h>
 #include <string>
 #include <locale>
-
-
 
 wchar_t* ANSIToUnicode(const char* str)
 {
@@ -141,8 +136,8 @@ static int get_pcm_from_mic() {
 	char* device_name = ANSIToUTF8(name);
 
 
-	//std::string device_name_utf8 = std::Ansi(device_name.c_str(), device_name.length());
-	//open device
+	if ((ret = avformat_open_input(&fmt_ctx, device_name, iformat, &options)) < 0)
+	{
 		av_strerror(ret, errors, 1024);
 		fprintf(stderr, "Failed to open audio device, [%d]%s\n", ret, errors);
 		return NULL;
@@ -152,7 +147,7 @@ static int get_pcm_from_mic() {
 	int count = 0;
 	//read data form audio
 	while (ret = (av_read_frame(fmt_ctx, &pkt)) == 0 && count++ < 40) {
-		av_log(NULL, AV_LOG_INFO, "pkt size is %d锛?p锛? count=%d\n",
+		av_log(NULL, AV_LOG_INFO, "pkt size is %d, count=%d\n",
 			pkt.size, pkt.data, count);
 		printf("count = %d\n", count);
 		fwrite(pkt.data, 1, pkt.size, outfile);
@@ -163,290 +158,285 @@ static int get_pcm_from_mic() {
 	fclose(outfile);
 	avformat_close_input(&fmt_ctx);//releas ctx
 
-	if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
-		printf("avformat_find_stream_info faill\n");
-		return -1;
-	}
 
-	printf("OK OK\n");}
+	printf("OK OK\n");
+}
 
 //参考：https://blog.csdn.net/guoyunfei123/article/details/106177347
 static int recordMp4() {
+	AVFormatContext* ifmtCtx = NULL;
+	AVFormatContext* ofmtCtx = NULL;
+	AVPacket pkt;
+	AVFrame* pFrame, * pFrameYUV;
+	SwsContext* pImgConvertCtx;
+	AVDictionary* params = NULL;
+	const AVCodec* pCodec;
+	AVCodecContext* pCodecCtx;
+	unsigned char* outBuffer;
+	AVCodecContext* pH264CodecCtx;
+	const AVCodec* pH264Codec;
+	AVDictionary* captureOptions = NULL;
+
+	ULONGLONG lastTime;
+
+	int ret = 0;
+	unsigned int i = 0;
+	int videoIndex = -1;
+	int frameIndex = 0;
+
+	const char* inFilename = "video=USB Video Device";//输入URL
+	const char* outFilename = "output.mp4"; //输出URL
+	const char* ofmtName = NULL;
+
+	avdevice_register_all();
+	avformat_network_init();
+
+	const AVInputFormat* ifmt = av_find_input_format("dshow");
+
+	if (!ifmt)
 	{
-		AVFormatContext* ifmtCtx = NULL;
-		AVFormatContext* ofmtCtx = NULL;
-		AVPacket pkt;
-		AVFrame* pFrame, * pFrameYUV;
-		SwsContext* pImgConvertCtx;
-		AVDictionary* params = NULL;
-		const AVCodec* pCodec;
-		AVCodecContext* pCodecCtx;
-		unsigned char* outBuffer;
-		AVCodecContext* pH264CodecCtx;
-		const AVCodec* pH264Codec;
-		AVDictionary* options = NULL;
+		printf("can't find input device\n");
+		goto end;
+	}
 
-		AVDictionary* captureOptions = NULL;
-		ULONGLONG lastTime;
+	// 1. 打开输入
+	// 1.1 打开输入文件，获取封装格式相关信息
+	ifmtCtx = avformat_alloc_context();
+	if (!ifmtCtx)
+	{
+		printf("can't alloc AVFormatContext\n");
+		goto end;
+	}
 
-		int ret = 0;
-		unsigned int i = 0;
-		int videoIndex = -1;
-		int frameIndex = 0;
+	av_dict_set_int(&captureOptions, "rtbufsize", 18432000, 0);
+	av_dict_set_int(&captureOptions, "framerate", 25, 0);
+	av_dict_set(&captureOptions, "video_size", "640x360", 0);
+	if ((ret = avformat_open_input(&ifmtCtx, inFilename, ifmt, &captureOptions)) < 0)
+	{
+		printf("can't open input file: %s\n", inFilename);
+		goto end;
+	}
 
-		const char* inFilename = "video=USB Video Device";//输入URL
-		const char* outFilename = "output.mp4"; //输出URL
-		const char* ofmtName = NULL;
+	// 1.2 解码一段数据，获取流相关信息
+	if ((ret = avformat_find_stream_info(ifmtCtx, 0)) < 0)
+	{
+		printf("failed to retrieve input stream information\n");
+		goto end;
+	}
 
-		avdevice_register_all();
-		avformat_network_init();
-
-		const AVInputFormat* ifmt = av_find_input_format("dshow");
-
-		if (!ifmt)
+	// 1.3 获取输入ctx
+	for (i = 0; i < ifmtCtx->nb_streams; ++i)
+	{
+		if (ifmtCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
 		{
-			printf("can't find input device\n");
+			videoIndex = i;
+			break;
+		}
+	}
+
+	printf("%s:%d, videoIndex = %d\n", __FUNCTION__, __LINE__, videoIndex);
+
+	av_dump_format(ifmtCtx, 0, inFilename, 0);
+
+	// 1.4 查找输入解码器
+	pCodec = avcodec_find_decoder(ifmtCtx->streams[videoIndex]->codecpar->codec_id);
+	if (!pCodec)
+	{
+		printf("can't find codec\n");
+		goto end;
+	}
+
+	pCodecCtx = avcodec_alloc_context3(pCodec);
+	if (!pCodecCtx)
+	{
+		printf("can't alloc codec context\n");
+		goto end;
+	}
+
+	avcodec_parameters_to_context(pCodecCtx, ifmtCtx->streams[videoIndex]->codecpar);
+
+	//  1.5 打开输入解码器
+	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
+	{
+		printf("can't open codec\n");
+		goto end;
+	}
+
+	pH264Codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+
+	if (!pH264Codec)
+	{
+		printf("can't find h264 codec.\n");
+		goto end;
+	}
+
+	pH264CodecCtx = avcodec_alloc_context3(pH264Codec);
+	pH264CodecCtx->codec_id = AV_CODEC_ID_H264;
+	pH264CodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
+	pH264CodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+	pH264CodecCtx->width = pCodecCtx->width;
+	pH264CodecCtx->height = pCodecCtx->height;
+	pH264CodecCtx->time_base.num = 1;
+	pH264CodecCtx->time_base.den = 25;
+	pH264CodecCtx->bit_rate = 400000;
+	pH264CodecCtx->gop_size = 250;
+	pH264CodecCtx->qmin = 10;
+	pH264CodecCtx->qmax = 51;
+
+	pH264CodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+
+	av_dict_set(&params, "preset", "superfast", 0);
+	av_dict_set(&params, "tune", "zerolatency", 0);
+
+	if (avcodec_open2(pH264CodecCtx, pH264Codec, &params) < 0)
+	{
+		printf("can't open video encoder.\n");
+		goto end;
+	}
+
+	avformat_alloc_output_context2(&ofmtCtx, NULL, NULL, outFilename);
+	if (!ofmtCtx)
+	{
+		printf("can't create output context\n");
+		goto end;
+	}
+
+	//创建输出流
+	for (int i = 0; i < ifmtCtx->nb_streams; i++)
+	{
+		AVStream* outStream = avformat_new_stream(ofmtCtx, pH264Codec);
+		if (!outStream)
+		{
+			printf("failed to allocate output stream\n");
 			goto end;
 		}
 
-		// 1. 打开输入
-		// 1.1 打开输入文件，获取封装格式相关信息
-		ifmtCtx = avformat_alloc_context();
-		if (!ifmtCtx)
-		{
-			printf("can't alloc AVFormatContext\n");
-			goto end;
-		}
+		avcodec_parameters_from_context(outStream->codecpar, pH264CodecCtx);
+	}
 
-		av_dict_set_int(&captureOptions, "rtbufsize", 18432000, 0);
-		av_dict_set_int(&captureOptions, "framerate", 25, 0);
-		av_dict_set(&captureOptions, "video_size", "640x360", 0);
-		if ((ret = avformat_open_input(&ifmtCtx, inFilename, ifmt, &captureOptions)) < 0)
-		{
-			printf("can't open input file: %s\n", inFilename);
-			goto end;
-		}
-
-		// 1.2 解码一段数据，获取流相关信息
-		if ((ret = avformat_find_stream_info(ifmtCtx, 0)) < 0)
-		{
-			printf("failed to retrieve input stream information\n");
-			goto end;
-		}
-
-		// 1.3 获取输入ctx
-		for (i = 0; i < ifmtCtx->nb_streams; ++i)
-		{
-			if (ifmtCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
-			{
-				videoIndex = i;
-				break;
-			}
-		}
-
-		printf("%s:%d, videoIndex = %d\n", __FUNCTION__, __LINE__, videoIndex);
-
-		av_dump_format(ifmtCtx, 0, inFilename, 0);
-
-		// 1.4 查找输入解码器
-		pCodec = avcodec_find_decoder(ifmtCtx->streams[videoIndex]->codecpar->codec_id);
-		if (!pCodec)
-		{
-			printf("can't find codec\n");
-			goto end;
-		}
-
-		pCodecCtx = avcodec_alloc_context3(pCodec);
-		if (!pCodecCtx)
-		{
-			printf("can't alloc codec context\n");
-			goto end;
-		}
-
-		avcodec_parameters_to_context(pCodecCtx, ifmtCtx->streams[videoIndex]->codecpar);
-
-		//  1.5 打开输入解码器
-		if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
-		{
-			printf("can't open codec\n");
-			goto end;
-		}
-
-		pH264Codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-
-		if (!pH264Codec)
-		{
-			printf("can't find h264 codec.\n");
-			goto end;
-		}
-
-		pH264CodecCtx = avcodec_alloc_context3(pH264Codec);
-		pH264CodecCtx->codec_id = AV_CODEC_ID_H264;
-		pH264CodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
-		pH264CodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
-		pH264CodecCtx->width = pCodecCtx->width;
-		pH264CodecCtx->height = pCodecCtx->height;
-		pH264CodecCtx->time_base.num = 1;
-		pH264CodecCtx->time_base.den = 25;
-		pH264CodecCtx->bit_rate = 400000;
-		pH264CodecCtx->gop_size = 250;
-		pH264CodecCtx->qmin = 10;
-		pH264CodecCtx->qmax = 51;
-
-		pH264CodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+	av_dump_format(ofmtCtx, 0, outFilename, 1);
 
 
-		av_dict_set(&params, "preset", "superfast", 0);
-		av_dict_set(&params, "tune", "zerolatency", 0);
-
-		if (avcodec_open2(pH264CodecCtx, pH264Codec, &params) < 0)
-		{
-			printf("can't open video encoder.\n");
-			goto end;
-		}
-
-		avformat_alloc_output_context2(&ofmtCtx, NULL, NULL, outFilename);
-		if (!ofmtCtx)
-		{
-			printf("can't create output context\n");
-			goto end;
-		}
-
-		//创建输出流
-		for (int i = 0; i < ifmtCtx->nb_streams; i++)
-		{
-			AVStream* outStream = avformat_new_stream(ofmtCtx, pH264Codec);
-			if (!outStream)
-			{
-				printf("failed to allocate output stream\n");
-				goto end;
-			}
-
-			avcodec_parameters_from_context(outStream->codecpar, pH264CodecCtx);
-		}
-
-		av_dump_format(ofmtCtx, 0, outFilename, 1);
-
-
-		if (!(ofmtCtx->oformat->flags & AVFMT_NOFILE))
-		{
-			// 2.3 创建并初始化一个AVIOContext, 用以访问URL（outFilename）指定的资源
-			ret = avio_open(&ofmtCtx->pb, outFilename, AVIO_FLAG_WRITE);
-			if (ret < 0)
-			{
-				printf("can't open output URL: %s\n", outFilename);
-				goto end;
-			}
-		}
-
-		// 3. 数据处理
-		// 3.1 写输出文件
-		ret = avformat_write_header(ofmtCtx, NULL);
+	if (!(ofmtCtx->oformat->flags & AVFMT_NOFILE))
+	{
+		// 2.3 创建并初始化一个AVIOContext, 用以访问URL（outFilename）指定的资源
+		ret = avio_open(&ofmtCtx->pb, outFilename, AVIO_FLAG_WRITE);
 		if (ret < 0)
 		{
-			printf("Error accourred when opening output file\n");
+			printf("can't open output URL: %s\n", outFilename);
 			goto end;
 		}
+	}
+
+	// 3. 数据处理
+	// 3.1 写输出文件
+	ret = avformat_write_header(ofmtCtx, NULL);
+	if (ret < 0)
+	{
+		printf("Error accourred when opening output file\n");
+		goto end;
+	}
 
 
-		pFrame = av_frame_alloc();
-		pFrameYUV = av_frame_alloc();
+	pFrame = av_frame_alloc();
+	pFrameYUV = av_frame_alloc();
 
-		outBuffer = (unsigned char*)av_malloc(
-			av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecCtx->width,
-				pCodecCtx->height, 1));
-		av_image_fill_arrays(pFrameYUV->data, pFrameYUV->linesize, outBuffer,
-			AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height, 1);
+	outBuffer = (unsigned char*)av_malloc(
+		av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecCtx->width,
+			pCodecCtx->height, 1));
+	av_image_fill_arrays(pFrameYUV->data, pFrameYUV->linesize, outBuffer,
+		AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height, 1);
 
-		pImgConvertCtx = sws_getContext(pCodecCtx->width, pCodecCtx->height,
-			pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height,
-			AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+	pImgConvertCtx = sws_getContext(pCodecCtx->width, pCodecCtx->height,
+		pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height,
+		AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
-		lastTime = GetTickCount64();
-		while (frameIndex < 200)
-		{
-			// 3.2 从输入流读取一个packet
+	lastTime = GetTickCount64();
+	while (frameIndex < 200)
+	{
+		// 3.2 从输入流读取一个packet
 			
-			ret = av_read_frame(ifmtCtx, &pkt);
+		ret = av_read_frame(ifmtCtx, &pkt);
 
-			ULONGLONG curTime = GetTickCount64();
-			ULONGLONG diff = curTime - lastTime;
-			printf("spend %lld\n", diff);
-			lastTime = curTime;
+		ULONGLONG curTime = GetTickCount64();
+		ULONGLONG diff = curTime - lastTime;
+		printf("spend %lld\n", diff);
+		lastTime = curTime;
 
+		if (ret < 0)
+		{
+			break;
+		}
+
+		if (pkt.stream_index == videoIndex)
+		{
+			ret = avcodec_send_packet(pCodecCtx, &pkt);
 			if (ret < 0)
 			{
-				break;
+				printf("Decode error.\n");
+				goto end;
 			}
 
-			if (pkt.stream_index == videoIndex)
+			if (avcodec_receive_frame(pCodecCtx, pFrame) >= 0)
 			{
-				ret = avcodec_send_packet(pCodecCtx, &pkt);
+				sws_scale(pImgConvertCtx,
+					(const unsigned char* const*)pFrame->data,
+					pFrame->linesize, 0, pCodecCtx->height, pFrameYUV->data,
+					pFrameYUV->linesize);
+
+
+				pFrameYUV->format = AV_PIX_FMT_YUV420P;
+				pFrameYUV->width = pCodecCtx->width;
+				pFrameYUV->height = pCodecCtx->height;
+
+				ret = avcodec_send_frame(pH264CodecCtx, pFrameYUV);
 				if (ret < 0)
 				{
-					printf("Decode error.\n");
+					printf("failed to encode.\n");
 					goto end;
 				}
 
-				if (avcodec_receive_frame(pCodecCtx, pFrame) >= 0)
+				if (avcodec_receive_packet(pH264CodecCtx, &pkt) >= 0)
 				{
-					sws_scale(pImgConvertCtx,
-						(const unsigned char* const*)pFrame->data,
-						pFrame->linesize, 0, pCodecCtx->height, pFrameYUV->data,
-						pFrameYUV->linesize);
+					// 设置输出DTS,PTS
+					pkt.pts = pkt.dts = frameIndex * (ofmtCtx->streams[0]->time_base.den) / ofmtCtx->streams[0]->time_base.num / 25;
+					frameIndex++;
 
-
-					pFrameYUV->format = AV_PIX_FMT_YUV420P;
-					pFrameYUV->width = pCodecCtx->width;
-					pFrameYUV->height = pCodecCtx->height;
-
-					ret = avcodec_send_frame(pH264CodecCtx, pFrameYUV);
+					ret = av_interleaved_write_frame(ofmtCtx, &pkt);
 					if (ret < 0)
 					{
-						printf("failed to encode.\n");
-						goto end;
+						printf("send packet failed: %d\n", ret);
 					}
-
-					if (avcodec_receive_packet(pH264CodecCtx, &pkt) >= 0)
+					else
 					{
-						// 设置输出DTS,PTS
-						pkt.pts = pkt.dts = frameIndex * (ofmtCtx->streams[0]->time_base.den) / ofmtCtx->streams[0]->time_base.num / 25;
-						frameIndex++;
-
-						ret = av_interleaved_write_frame(ofmtCtx, &pkt);
-						if (ret < 0)
-						{
-							printf("send packet failed: %d\n", ret);
-						}
-						else
-						{
-							printf("send %5d packet successfully!\n", frameIndex);
-						}
+						printf("send %5d packet successfully!\n", frameIndex);
 					}
 				}
 			}
-
-			av_packet_unref(&pkt);
 		}
 
-		av_write_trailer(ofmtCtx);
-
-	end:
-		avformat_close_input(&ifmtCtx);
-
-		/* close output */
-		if (ofmtCtx && !(ofmtCtx->oformat->flags & AVFMT_NOFILE)) {
-			avio_closep(&ofmtCtx->pb);
-		}
-		avformat_free_context(ofmtCtx);
-
-		if (ret < 0 && ret != AVERROR_EOF) {
-			printf("Error occurred\n");
-			return -1;
-		}
-
-		return 0;
+		av_packet_unref(&pkt);
 	}
+
+	av_write_trailer(ofmtCtx);
+
+end:
+	avformat_close_input(&ifmtCtx);
+
+	/* close output */
+	if (ofmtCtx && !(ofmtCtx->oformat->flags & AVFMT_NOFILE)) {
+		avio_closep(&ofmtCtx->pb);
+	}
+	avformat_free_context(ofmtCtx);
+
+	if (ret < 0 && ret != AVERROR_EOF) {
+		printf("Error occurred\n");
+		return -1;
+	}
+
+	return 0;
+
 }
 
 
@@ -491,11 +481,7 @@ static int sdl_play() {
 	const AVInputFormat* ifmt = av_find_input_format("dshow");
 	pFormatCtx = avformat_alloc_context();
 
-	//AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
-	//AVDictionary* options = NULL;
-<<<<<<< HEAD
 	//av_dict_set(&options, "framerate", "15", 0);//帧lu
-	// 打开输入文件
 	if (avformat_open_input(&pFormatCtx, "video=Logitech HD Webcam C270", ifmt, NULL) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
 		goto __FAIL;
