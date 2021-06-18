@@ -1,4 +1,4 @@
-ï»¿
+
 
 
 extern "C" {
@@ -14,15 +14,93 @@ extern "C" {
 #include "libswresample/swresample.h"
 #include "SDL.h"
 }
-#define WIN32_LEAN_AND_MEAN             // ä» Windows å¤´æ–‡ä»¶ä¸­æ’é™¤æå°‘ä½¿ç”¨çš„å†…å®¹
-// Windows å¤´æ–‡ä»¶
+#define WIN32_LEAN_AND_MEAN             // ´Ó Windows Í·ÎÄ¼şÖĞÅÅ³ı¼«ÉÙÊ¹ÓÃµÄÄÚÈİ
+// Windows Í·ÎÄ¼ş
 #include <windows.h>
-// C è¿è¡Œæ—¶å¤´æ–‡ä»¶
+// C ÔËĞĞÊ±Í·ÎÄ¼ş
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
 #include <string>
+#include <locale>
+
+
+
+wchar_t* ANSIToUnicode(const char* str)
+{
+	int textlen;
+	wchar_t* result;
+	textlen = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+	result = (wchar_t*)malloc((textlen + 1) * sizeof(wchar_t));
+	memset(result, 0, (textlen + 1) * sizeof(wchar_t));
+	MultiByteToWideChar(CP_ACP, 0, str, -1, (LPWSTR)result, textlen);
+	return result;
+}
+
+char* UnicodeToANSI(const wchar_t* str)
+{
+	char* result;
+	int textlen;
+	textlen = WideCharToMultiByte(CP_ACP, 0, str, -1, NULL, 0, NULL, NULL);
+	result = (char*)malloc((textlen + 1) * sizeof(char));
+	memset(result, 0, sizeof(char) * (textlen + 1));
+	WideCharToMultiByte(CP_ACP, 0, str, -1, result, textlen, NULL, NULL);
+	return result;
+}
+
+wchar_t* UTF8ToUnicode(const char* str)
+{
+	int textlen;
+	wchar_t* result;
+	textlen = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+	result = (wchar_t*)malloc((textlen + 1) * sizeof(wchar_t));
+	memset(result, 0, (textlen + 1) * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, str, -1, (LPWSTR)result, textlen);
+	return result;
+}
+
+char* UnicodeToUTF8(const wchar_t* str)
+{
+	char* result;
+	int textlen;
+	textlen = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+	result = (char*)malloc((textlen + 1) * sizeof(char));
+	memset(result, 0, sizeof(char) * (textlen + 1));
+	WideCharToMultiByte(CP_UTF8, 0, str, -1, result, textlen, NULL, NULL);
+	return result;
+}
+/*¿í×Ö·û×ª»»Îª¶à×Ö·ûUnicode - ANSI*/
+char* w2m(const wchar_t* wcs)
+{
+	int len;
+	char* buf;
+	len = wcstombs(NULL, wcs, 0);
+	if (len == 0)
+		return NULL;
+	buf = (char*)malloc(sizeof(char) * (len + 1));
+	memset(buf, 0, sizeof(char) * (len + 1));
+	len = wcstombs(buf, wcs, len + 1);
+	return buf;
+}
+/*¶à×Ö·û×ª»»Îª¿í×Ö·ûANSI - Unicode*/
+wchar_t* m2w(const char* mbs)
+{
+	int len;
+	wchar_t* buf;
+	len = mbstowcs(NULL, mbs, 0);
+	if (len == 0)
+		return NULL;
+	buf = (wchar_t*)malloc(sizeof(wchar_t) * (len + 1));
+	memset(buf, 0, sizeof(wchar_t) * (len + 1));
+	len = mbstowcs(buf, mbs, len + 1);
+	return buf;
+}
+
+char* ANSIToUTF8(const char* str)
+{
+	return UnicodeToUTF8(ANSIToUnicode(str));
+}
 
 
 char* dup_wchar_to_utf8(wchar_t* w)
@@ -59,15 +137,12 @@ static int get_pcm_from_mic() {
 	FILE* outfile = fopen(out, "wb+");
 	//get format
 	const AVInputFormat* iformat = av_find_input_format("dshow");
+	const char* name = "audio=Âó¿Ë·ç (USB Audio Device)";
+	char* device_name = ANSIToUTF8(name);
 
-	//std::string device_name = "audio=éº¦å…‹é£ (USB Audio Device)";
 
-	wchar_t w[256] = L"audio=éº¦å…‹é£ (HD Webcam C270)";
-
-	char* fileAudioInput = dup_wchar_to_utf8(w);
 	//std::string device_name_utf8 = std::Ansi(device_name.c_str(), device_name.length());
 	//open device
-	if ((ret = avformat_open_input(&fmt_ctx, fileAudioInput, iformat, NULL)) < 0) {
 		av_strerror(ret, errors, 1024);
 		fprintf(stderr, "Failed to open audio device, [%d]%s\n", ret, errors);
 		return NULL;
@@ -77,7 +152,7 @@ static int get_pcm_from_mic() {
 	int count = 0;
 	//read data form audio
 	while (ret = (av_read_frame(fmt_ctx, &pkt)) == 0 && count++ < 40) {
-		av_log(NULL, AV_LOG_INFO, "pkt size is %dï¼ˆ%pï¼‰, count=%d\n",
+		av_log(NULL, AV_LOG_INFO, "pkt size is %dï¼?pï¼? count=%d\n",
 			pkt.size, pkt.data, count);
 		printf("count = %d\n", count);
 		fwrite(pkt.data, 1, pkt.size, outfile);
@@ -88,9 +163,14 @@ static int get_pcm_from_mic() {
 	fclose(outfile);
 	avformat_close_input(&fmt_ctx);//releas ctx
 
-}
+	if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
+		printf("avformat_find_stream_info faill\n");
+		return -1;
+	}
 
+	printf("OK OK\n");}
 
+//²Î¿¼£ºhttps://blog.csdn.net/guoyunfei123/article/details/106177347
 static int recordMp4() {
 	{
 		AVFormatContext* ifmtCtx = NULL;
@@ -106,13 +186,16 @@ static int recordMp4() {
 		const AVCodec* pH264Codec;
 		AVDictionary* options = NULL;
 
+		AVDictionary* captureOptions = NULL;
+		ULONGLONG lastTime;
+
 		int ret = 0;
 		unsigned int i = 0;
 		int videoIndex = -1;
 		int frameIndex = 0;
 
-		const char* inFilename = "video=USB Video Device";//è¾“å…¥URL
-		const char* outFilename = "output.mp4"; //è¾“å‡ºURL
+		const char* inFilename = "video=USB Video Device";//ÊäÈëURL
+		const char* outFilename = "output.mp4"; //Êä³öURL
 		const char* ofmtName = NULL;
 
 		avdevice_register_all();
@@ -126,8 +209,8 @@ static int recordMp4() {
 			goto end;
 		}
 
-		// 1. æ‰“å¼€è¾“å…¥
-		// 1.1 æ‰“å¼€è¾“å…¥æ–‡ä»¶ï¼Œè·å–å°è£…æ ¼å¼ç›¸å…³ä¿¡æ¯
+		// 1. ´ò¿ªÊäÈë
+		// 1.1 ´ò¿ªÊäÈëÎÄ¼ş£¬»ñÈ¡·â×°¸ñÊ½Ïà¹ØĞÅÏ¢
 		ifmtCtx = avformat_alloc_context();
 		if (!ifmtCtx)
 		{
@@ -135,21 +218,23 @@ static int recordMp4() {
 			goto end;
 		}
 
-		av_dict_set_int(&options, "rtbufsize", 18432000, 0);
-		if ((ret = avformat_open_input(&ifmtCtx, inFilename, ifmt, &options)) < 0)
+		av_dict_set_int(&captureOptions, "rtbufsize", 18432000, 0);
+		av_dict_set_int(&captureOptions, "framerate", 25, 0);
+		av_dict_set(&captureOptions, "video_size", "640x360", 0);
+		if ((ret = avformat_open_input(&ifmtCtx, inFilename, ifmt, &captureOptions)) < 0)
 		{
 			printf("can't open input file: %s\n", inFilename);
 			goto end;
 		}
 
-		// 1.2 è§£ç ä¸€æ®µæ•°æ®ï¼Œè·å–æµç›¸å…³ä¿¡æ¯
+		// 1.2 ½âÂëÒ»¶ÎÊı¾İ£¬»ñÈ¡Á÷Ïà¹ØĞÅÏ¢
 		if ((ret = avformat_find_stream_info(ifmtCtx, 0)) < 0)
 		{
 			printf("failed to retrieve input stream information\n");
 			goto end;
 		}
 
-		// 1.3 è·å–è¾“å…¥ctx
+		// 1.3 »ñÈ¡ÊäÈëctx
 		for (i = 0; i < ifmtCtx->nb_streams; ++i)
 		{
 			if (ifmtCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
@@ -163,7 +248,7 @@ static int recordMp4() {
 
 		av_dump_format(ifmtCtx, 0, inFilename, 0);
 
-		// 1.4 æŸ¥æ‰¾è¾“å…¥è§£ç å™¨
+		// 1.4 ²éÕÒÊäÈë½âÂëÆ÷
 		pCodec = avcodec_find_decoder(ifmtCtx->streams[videoIndex]->codecpar->codec_id);
 		if (!pCodec)
 		{
@@ -180,23 +265,21 @@ static int recordMp4() {
 
 		avcodec_parameters_to_context(pCodecCtx, ifmtCtx->streams[videoIndex]->codecpar);
 
-		//  1.5 æ‰“å¼€è¾“å…¥è§£ç å™¨
+		//  1.5 ´ò¿ªÊäÈë½âÂëÆ÷
 		if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
 		{
 			printf("can't open codec\n");
 			goto end;
 		}
 
-
-		// 1.6 æŸ¥æ‰¾H264ç¼–ç å™¨
 		pH264Codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+
 		if (!pH264Codec)
 		{
 			printf("can't find h264 codec.\n");
 			goto end;
 		}
 
-		// 1.6.1 è®¾ç½®å‚æ•°
 		pH264CodecCtx = avcodec_alloc_context3(pH264Codec);
 		pH264CodecCtx->codec_id = AV_CODEC_ID_H264;
 		pH264CodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -204,53 +287,35 @@ static int recordMp4() {
 		pH264CodecCtx->width = pCodecCtx->width;
 		pH264CodecCtx->height = pCodecCtx->height;
 		pH264CodecCtx->time_base.num = 1;
-		pH264CodecCtx->time_base.den = 25;	//å¸§ç‡ï¼ˆå³ä¸€ç§’é’Ÿå¤šå°‘å¼ å›¾ç‰‡ï¼‰
-		pH264CodecCtx->bit_rate = 400000;	//æ¯”ç‰¹ç‡ï¼ˆè°ƒèŠ‚è¿™ä¸ªå¤§å°å¯ä»¥æ”¹å˜ç¼–ç åè§†é¢‘çš„è´¨é‡ï¼‰
+		pH264CodecCtx->time_base.den = 25;
+		pH264CodecCtx->bit_rate = 400000;
 		pH264CodecCtx->gop_size = 250;
 		pH264CodecCtx->qmin = 10;
 		pH264CodecCtx->qmax = 51;
-		//some formats want stream headers to be separate
-	//	if (pH264CodecCtx->flags & AVFMT_GLOBALHEADER)
-		{
-			pH264CodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-		}
+
+		pH264CodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
 
-		// 1.7 æ‰“å¼€H.264ç¼–ç å™¨
 		av_dict_set(&params, "preset", "superfast", 0);
-		av_dict_set(&params, "tune", "zerolatency", 0);	//å®ç°å®æ—¶ç¼–ç 
+		av_dict_set(&params, "tune", "zerolatency", 0);
+
 		if (avcodec_open2(pH264CodecCtx, pH264Codec, &params) < 0)
 		{
 			printf("can't open video encoder.\n");
 			goto end;
 		}
 
-		// 2. æ‰“å¼€è¾“å‡º
-		// 2.1 åˆ†é…è¾“å‡ºctx
-		if (strstr(outFilename, "rtmp://"))
-		{
-			ofmtName = "flv";
-		}
-		else if (strstr(outFilename, "udp://"))
-		{
-			ofmtName = "mpegts";
-		}
-		else
-		{
-			ofmtName = NULL;
-		}
-
-		avformat_alloc_output_context2(&ofmtCtx, NULL, ofmtName, outFilename);
+		avformat_alloc_output_context2(&ofmtCtx, NULL, NULL, outFilename);
 		if (!ofmtCtx)
 		{
 			printf("can't create output context\n");
 			goto end;
 		}
 
-		// 2.2 åˆ›å»ºè¾“å‡ºæµ
-		for (i = 0; i < ifmtCtx->nb_streams; ++i)
+		//´´½¨Êä³öÁ÷
+		for (int i = 0; i < ifmtCtx->nb_streams; i++)
 		{
-			AVStream* outStream = avformat_new_stream(ofmtCtx, NULL);
+			AVStream* outStream = avformat_new_stream(ofmtCtx, pH264Codec);
 			if (!outStream)
 			{
 				printf("failed to allocate output stream\n");
@@ -262,9 +327,10 @@ static int recordMp4() {
 
 		av_dump_format(ofmtCtx, 0, outFilename, 1);
 
+
 		if (!(ofmtCtx->oformat->flags & AVFMT_NOFILE))
 		{
-			// 2.3 åˆ›å»ºå¹¶åˆå§‹åŒ–ä¸€ä¸ªAVIOContext, ç”¨ä»¥è®¿é—®URLï¼ˆoutFilenameï¼‰æŒ‡å®šçš„èµ„æº
+			// 2.3 ´´½¨²¢³õÊ¼»¯Ò»¸öAVIOContext, ÓÃÒÔ·ÃÎÊURL£¨outFilename£©Ö¸¶¨µÄ×ÊÔ´
 			ret = avio_open(&ofmtCtx->pb, outFilename, AVIO_FLAG_WRITE);
 			if (ret < 0)
 			{
@@ -273,8 +339,8 @@ static int recordMp4() {
 			}
 		}
 
-		// 3. æ•°æ®å¤„ç†
-		// 3.1 å†™è¾“å‡ºæ–‡ä»¶
+		// 3. Êı¾İ´¦Àí
+		// 3.1 Ğ´Êä³öÎÄ¼ş
 		ret = avformat_write_header(ofmtCtx, NULL);
 		if (ret < 0)
 		{
@@ -296,11 +362,18 @@ static int recordMp4() {
 			pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height,
 			AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
-
-		while (frameIndex < 1000)
+		lastTime = GetTickCount64();
+		while (frameIndex < 200)
 		{
-			// 3.2 ä»è¾“å…¥æµè¯»å–ä¸€ä¸ªpacket
+			// 3.2 ´ÓÊäÈëÁ÷¶ÁÈ¡Ò»¸öpacket
+			
 			ret = av_read_frame(ifmtCtx, &pkt);
+
+			ULONGLONG curTime = GetTickCount64();
+			ULONGLONG diff = curTime - lastTime;
+			printf("spend %lld\n", diff);
+			lastTime = curTime;
+
 			if (ret < 0)
 			{
 				break;
@@ -336,7 +409,7 @@ static int recordMp4() {
 
 					if (avcodec_receive_packet(pH264CodecCtx, &pkt) >= 0)
 					{
-						// è®¾ç½®è¾“å‡ºDTS,PTS
+						// ÉèÖÃÊä³öDTS,PTS
 						pkt.pts = pkt.dts = frameIndex * (ofmtCtx->streams[0]->time_base.den) / ofmtCtx->streams[0]->time_base.num / 25;
 						frameIndex++;
 
@@ -402,12 +475,12 @@ static int sdl_play() {
 	int imageSize = 0;
 
 	uint8_t* buf = NULL;
-	//é»˜è®¤çª—å£å¤§å°
+	//Ä¬ÈÏ´°¿Ú´óĞ¡
 	int w_width = 640;
 	int w_height = 480;
 
 	
-	//SDLåˆå§‹åŒ–
+	//SDL³õÊ¼»¯
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL - %s\n", SDL_GetError());
 		return ret;
@@ -418,10 +491,11 @@ static int sdl_play() {
 	const AVInputFormat* ifmt = av_find_input_format("dshow");
 	pFormatCtx = avformat_alloc_context();
 
-	//AVInputFormat* ifmt = av_find_input_format("gdigrab");//è®¾å¤‡ç±»å‹
+	//AVInputFormat* ifmt = av_find_input_format("gdigrab");//Éè±¸ÀàĞÍ
 	//AVDictionary* options = NULL;
-	//av_dict_set(&options, "framerate", "15", 0);//å¸§lu
-	// æ‰“å¼€è¾“å…¥æ–‡ä»¶
+<<<<<<< HEAD
+	//av_dict_set(&options, "framerate", "15", 0);//Ö¡lu
+	// ´ò¿ªÊäÈëÎÄ¼ş
 	if (avformat_open_input(&pFormatCtx, "video=Logitech HD Webcam C270", ifmt, NULL) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open  video file!");
 		goto __FAIL;
@@ -431,31 +505,31 @@ static int sdl_play() {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't avformat_find_stream_info!");
 		goto __FAIL;
 	}
-	//æ‰¾åˆ°è§†é¢‘æµ
+	//ÕÒµ½ÊÓÆµÁ÷
 	videoStream = av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 	if (videoStream == -1) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Din't find a video stream!");
 		goto __FAIL;// Didn't find a video stream
 	}
 
-	// æµå‚æ•°
+	// Á÷²ÎÊı
 	pCodecParameters = pFormatCtx->streams[videoStream]->codecpar;
 
-	//è·å–è§£ç å™¨
+	//»ñÈ¡½âÂëÆ÷
 	pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
 	if (pCodec == NULL) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unsupported codec!\n");
 		goto __FAIL; // Codec not found
 	}
 
-	// åˆå§‹åŒ–ä¸€ä¸ªç¼–è§£ç ä¸Šä¸‹æ–‡
+	// ³õÊ¼»¯Ò»¸ö±à½âÂëÉÏÏÂÎÄ
 	pCodecCtx = avcodec_alloc_context3(pCodec);
 	if (avcodec_parameters_to_context(pCodecCtx, pCodecParameters) != 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't copy codec context");
 		goto __FAIL;// Error copying codec context
 	}
 
-	// æ‰“å¼€è§£ç å™¨
+	// ´ò¿ª½âÂëÆ÷
 	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to open decoder!\n");
 		goto __FAIL; // Could not open codec
@@ -475,7 +549,7 @@ static int sdl_play() {
 	w_height = pCodecCtx->height;
 
 	win = SDL_CreateWindow("wenfeng sdl win", 100, 100, 600, 600, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
-	////åˆ›å»ºçª—å£
+	////´´½¨´°¿Ú
 	//win = SDL_CreateWindow("Media Player",
 	//	SDL_WINDOWPOS_UNDEFINED,
 	//	SDL_WINDOWPOS_UNDEFINED,
@@ -487,7 +561,7 @@ static int sdl_play() {
 	//}
 
 
-	//åˆ›å»ºæ¸²æŸ“å™¨
+	//´´½¨äÖÈ¾Æ÷
 	swsContext = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height, targetFormat, SWS_BICUBIC, NULL, NULL, NULL);
 
 	renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
@@ -497,8 +571,8 @@ static int sdl_play() {
 	//	goto __FAIL;
 	//}
 
-	pixformat = SDL_PIXELFORMAT_RGB24;//YUVæ ¼å¼
-	// åˆ›å»ºçº¹ç†
+	pixformat = SDL_PIXELFORMAT_RGB24;//YUV¸ñÊ½
+	// ´´½¨ÎÆÀí
 	texture = SDL_CreateTexture(renderer,
 		pixformat,
 		SDL_TEXTUREACCESS_STREAMING,
@@ -506,10 +580,10 @@ static int sdl_play() {
 		w_height);
 
 
-	//è¯»å–æ•°æ®
+	//¶ÁÈ¡Êı¾İ
 	while (av_read_frame(pFormatCtx, &packet) >= 0) {
 		if (packet.stream_index == videoStream) {
-			//è§£ç 
+			//½âÂë
 			avcodec_send_packet(pCodecCtx, &packet);
 			while (avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
 
@@ -537,7 +611,7 @@ static int sdl_play() {
 				SDL_UpdateTexture(texture,
 					&rect,
 					nvFrame->data[0], nvFrame->linesize[0]);
-				//å±•ç¤º
+				//Õ¹Ê¾
 				SDL_RenderClear(renderer);
 				SDL_RenderCopy(renderer, texture, NULL, &rect);
 				SDL_RenderPresent(renderer);
@@ -546,7 +620,7 @@ static int sdl_play() {
 
 		av_packet_unref(&packet);
 
-		// äº‹ä»¶å¤„ç†
+		// ÊÂ¼ş´¦Àí
 		SDL_Event event;
 		SDL_PollEvent(&event);
 		if (event.type == SDL_QUIT) {
@@ -727,14 +801,14 @@ static int video_decode_example(const char* input_filename)
 		}
 		i++;
 	}
-	fclose(fp_yuv);// éå¸¸é‡è¦
+	fclose(fp_yuv);// ·Ç³£ÖØÒª
 	return 1;
 }
 
-//win32æ˜¾ç¤º
+//win32ÏÔÊ¾
 static void Show(HWND hwnd, unsigned char* rgb, int w, int h, bool fill)
 {
-	HDC hdc = GetDC(hwnd);//è·å–å½“å‰çš„æ˜¾ç¤ºè®¾å¤‡ä¸Šä¸‹æ–‡
+	HDC hdc = GetDC(hwnd);//»ñÈ¡µ±Ç°µÄÏÔÊ¾Éè±¸ÉÏÏÂÎÄ
 
 	RECT rect;
 	GetClientRect(hwnd, &rect);
@@ -745,10 +819,10 @@ static void Show(HWND hwnd, unsigned char* rgb, int w, int h, bool fill)
 		return;
 	}
 
-	HDC  hdcsource = CreateCompatibleDC(NULL);//åˆ›å»ºå­˜æ”¾å›¾è±¡çš„æ˜¾ç¤ºç¼“å†²
+	HDC  hdcsource = CreateCompatibleDC(NULL);//´´½¨´æ·ÅÍ¼ÏóµÄÏÔÊ¾»º³å
 	HBITMAP bitmap = CreateCompatibleBitmap(hdc, cxClient, cyClient);
 
-	SelectObject(hdcsource, bitmap);    //å°†ä½å›¾èµ„æºè£…å…¥æ˜¾ç¤ºç¼“å†²
+	SelectObject(hdcsource, bitmap);    //½«Î»Í¼×ÊÔ´×°ÈëÏÔÊ¾»º³å
 
 	SetStretchBltMode(hdcsource, COLORONCOLOR);
 
@@ -795,7 +869,7 @@ static void Show(HWND hwnd, unsigned char* rgb, int w, int h, bool fill)
 		StretchDIBits(hdcsource, 0, 0, rect.right - rect.left, rect.bottom - rect.top, \
 			0, 0, w, h, rgb, &bmi, DIB_RGB_COLORS, SRCCOPY);
 
-		BitBlt(hdc, 0, 0, cxClient, cyClient, hdcsource, 0, 0, SRCCOPY);//å°†å›¾è±¡æ˜¾ç¤ºç¼“å†²çš„å†…å®¹ç›´æ¥æ˜¾ç¤ºåˆ°å±å¹•
+		BitBlt(hdc, 0, 0, cxClient, cyClient, hdcsource, 0, 0, SRCCOPY);//½«Í¼ÏóÏÔÊ¾»º³åµÄÄÚÈİÖ±½ÓÏÔÊ¾µ½ÆÁÄ»
 	}
 
 	DeleteObject(bitmap);
@@ -828,11 +902,11 @@ static AVFrame* alloc_picture(enum AVPixelFormat pix_fmt, int width, int height)
 
 static int test1() {
 	AVFormatContext* formatCtx = avformat_alloc_context();
-	const AVInputFormat* ifmt = av_find_input_format("gdigrab");//è®¾å¤‡ç±»å‹
-	//AVInputFormat *ifmt = av_find_input_format("dshow");//è®¾å¤‡ç±»å‹
+	const AVInputFormat* ifmt = av_find_input_format("gdigrab");//Éè±¸ÀàĞÍ
+	//AVInputFormat *ifmt = av_find_input_format("dshow");//Éè±¸ÀàĞÍ
 	AVDictionary* options = NULL;
-	//av_dict_set(&options, "video_size","1920*1080",0);//å¤§å°  é»˜è®¤å…¨éƒ¨
-	av_dict_set(&options, "framerate", "15", 0);//å¸§lu
+	//av_dict_set(&options, "video_size","1920*1080",0);//´óĞ¡  Ä¬ÈÏÈ«²¿
+	av_dict_set(&options, "framerate", "15", 0);//Ö¡lu
 	if (avformat_open_input(&formatCtx, "desktop", ifmt, &options) != 0) {
 		//if (avformat_open_input(&formatCtx, "video=Integrated Camera", ifmt, &options) != 0) {
 		printf("open input device fail\n");
@@ -848,7 +922,7 @@ static int test1() {
 		printf("no find stream info\n");
 		return -1;
 	}
-	//æŸ¥æ‰¾è§£å¯†å™¨
+	//²éÕÒ½âÃÜÆ÷
 	const AVCodec* codec = avcodec_find_decoder(formatCtx->streams[0]->codecpar->codec_id);
 	if (codec == NULL) {
 		printf("codec not found\n");
@@ -863,10 +937,10 @@ static int test1() {
 	printf("pix format is %d\n", formatCtx->streams[0]->codecpar->format);//==AVPixelFormat->AV_PIX_FMT_BGRA 
 
 	AVFrame* frame = alloc_picture((AVPixelFormat)formatCtx->streams[0]->codecpar->format, formatCtx->streams[0]->codecpar->width, formatCtx->streams[0]->codecpar->height);
-	//ç›®æ ‡
+	//Ä¿±ê
 	AVFrame* bgrframe = alloc_picture(AV_PIX_FMT_BGR24, formatCtx->streams[0]->codecpar->width, formatCtx->streams[0]->codecpar->height);;
 
-	//å›¾åƒè½¬æ¢
+	//Í¼Ïñ×ª»»
 	SwsContext* img_convert_ctx = sws_getContext(formatCtx->streams[0]->codecpar->width, formatCtx->streams[0]->codecpar->height, (AVPixelFormat)formatCtx->streams[0]->codecpar->format,
 		formatCtx->streams[0]->codecpar->width, formatCtx->streams[0]->codecpar->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
 
@@ -879,10 +953,10 @@ static int test1() {
 				printf("decode error\n");
 			}
 			else {
-				printf("é‡‡é›†åˆ°å›¾ç‰‡");
-				//è½¬æ¢ AV_PIX_FMT_BGRA to AV_PIX_FMT_BGR24
+				//printf("²É¼¯µ½Í¼Æ¬");
+				//×ª»» AV_PIX_FMT_BGRA to AV_PIX_FMT_BGR24
 				sws_scale(img_convert_ctx, (const unsigned char* const*)frame->data, frame->linesize, 0, frame->height, bgrframe->data, bgrframe->linesize);
-				Show(FindWindow(NULL, L"è§†é¢‘æ’­æ”¾"), bgrframe->data[0], bgrframe->width, bgrframe->height, true);
+				Show(FindWindow(NULL, L"ÊÓÆµ²¥·Å"), bgrframe->data[0], bgrframe->width, bgrframe->height, true);
 			}
 		}
 		av_packet_unref(&packet);
@@ -922,7 +996,7 @@ static LRESULT CALLBACK WinProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lpar
 #undef main
 int main()
 {
-	printf("okï¼š%d\n", avcodec_version());
+	printf("ok£º%d\n", avcodec_version());
 	//video_decode_example("nature.h264");
 	avdevice_register_all();
 	int i = 0;
@@ -930,8 +1004,8 @@ int main()
 		int cc = 10;
 	}
 	//sdl_play();
-	//get_pcm_from_mic();
-	recordMp4();
+	get_pcm_from_mic();
+	//recordMp4();
 	if (true) {
 		return 1;
 	}
@@ -955,7 +1029,7 @@ int main()
 	ATOM nAtom = RegisterClassEx(&wce);
 	if (!nAtom)
 	{
-		MessageBox(NULL, L"RegisterClassExå¤±è´¥", L"é”™è¯¯", MB_OK);
+		MessageBox(NULL, L"RegisterClassExÊ§°Ü", L"´íÎó", MB_OK);
 		return 0;
 	}
 	const char* szStr = "Main";
@@ -963,17 +1037,17 @@ int main()
 	memset(wszClassName, 0, sizeof(wszClassName));
 	MultiByteToWideChar(CP_ACP, 0, szStr, strlen(szStr) + 1, wszClassName,
 		sizeof(wszClassName) / sizeof(wszClassName[0]));
-	HWND hwnd = CreateWindow(wszClassName, L"è§†é¢‘æ’­æ”¾", WS_OVERLAPPEDWINDOW, 38, 20, 640, 480, NULL, NULL, hInstance, NULL);
-	// æ˜¾ç¤ºçª—å£  
+	HWND hwnd = CreateWindow(wszClassName, L"ÊÓÆµ²¥·Å", WS_OVERLAPPEDWINDOW, 38, 20, 640, 480, NULL, NULL, hInstance, NULL);
+	// ÏÔÊ¾´°¿Ú  
 	ShowWindow(hwnd, SW_SHOW);
-	// æ›´æ–°çª—å£  
+	// ¸üĞÂ´°¿Ú  
 	UpdateWindow(hwnd);
 
 
-	test1(); //å±å¹•
+	test1(); //ÆÁÄ»
 
 
-	// æ¶ˆæ¯å¾ªç¯  
+	// ÏûÏ¢Ñ­»·  
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
