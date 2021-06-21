@@ -80,8 +80,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\SDL2-2.0.14\include;..\ffmpeg64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>..\SDL2-2.0.14\lib\x64;..\ffmpeg64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\SDL2-2.0.14\include;..\fdk-aac\include\libSYS\include;..\fdk-aac\include\libAACenc\include;..\ffmpeg64\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\SDL2-2.0.14\lib\x64;..\fdk-aac\lib;..\ffmpeg64\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -125,7 +125,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;SDL2.lib;fdk-aac.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
