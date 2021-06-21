@@ -134,7 +134,7 @@ static int pcm2aac()
 
 	unsigned char pcm_data[4096];
 
-	int channel = 1;
+	int channel = 2;
 	/* 0x01 for AAC module */
 
 	if (aacEncOpen(&aacEncHandle, 0, channel) != AACENC_OK)
@@ -155,7 +155,7 @@ static int pcm2aac()
 	}
 
 	/* ×óÓÒÉùµÀ */
-	if (aacEncoder_SetParam(aacEncHandle, AACENC_CHANNELMODE, MODE_1) != AACENC_OK)
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_CHANNELMODE, MODE_2) != AACENC_OK)
 	{
 		return -1;
 	}
@@ -166,7 +166,7 @@ static int pcm2aac()
 		return -1;
 	}
 
-	if (aacEncoder_SetParam(aacEncHandle, AACENC_BITRATE, 38000) != AACENC_OK)
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_BITRATE, 58000) != AACENC_OK)
 	{
 		return -1;
 	}
@@ -211,13 +211,13 @@ static int pcm2aac()
 	void* out_ptr = aac_buf;
 	int out_elem_size = 1;
 
-	FILE* rfd = fopen("audio.pcm", "rb+");
+	FILE* rfd = fopen("Test.pcm", "rb+");
 	if (!rfd)
 	{
 		return -1;
 	}
 
-	FILE* wfd = fopen("audio.aac", "wb+");
+	FILE* wfd = fopen("Test.aac", "wb+");
 	if (!wfd)
 	{
 		return -1;
