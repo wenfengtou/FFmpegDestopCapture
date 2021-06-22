@@ -416,23 +416,24 @@ static int get_pcm_from_mic() {
 	int count = 0;
 	AVAudioFifo* avFifo = av_audio_fifo_alloc(AV_SAMPLE_FMT_S16P, 1, 1);
 	//read data form audio
-	while (ret = (av_read_frame(fmt_ctx, &pkt)) == 0 && count++ < 10) {
+	while (ret = (av_read_frame(fmt_ctx, &pkt)) == 0 && count++ < 20) {
 		av_log(NULL, AV_LOG_INFO, "pkt size is %d, count=%d\n",
 			pkt.size, count);
 		fwrite(pkt.data, 1, pkt.size, outfile);
 		fflush(outfile);
 		//fifo±àÂë
 		int result;
-		result = av_audio_fifo_realloc(avFifo, 2 * pkt.size);
-		printf("av_audio_fifo_realloc result = %d\n", result);
-		int space = av_audio_fifo_space(avFifo);
-		printf("space = %d\n", space);
-		result = av_audio_fifo_write(avFifo, (void**)(&(pkt.data)), pkt.size);
-		av_packet_unref(&pkt);//release pkt
-		printf("av_audio_fifo_write result = %d\n", result);
-		int size = av_audio_fifo_size(avFifo);
-		space = av_audio_fifo_space(avFifo);
-		while (av_audio_fifo_size(avFifo) >= 1024)
+		//result = av_audio_fifo_realloc(avFifo, 2 * pkt.size);
+		//printf("av_audio_fifo_realloc result = %d\n", result);
+		//int space = av_audio_fifo_space(avFifo);
+		//printf("space = %d\n", space);
+		//result = av_audio_fifo_write(avFifo, (void**)(&(pkt.data)), pkt.size);
+		//av_packet_unref(&pkt);//release pkt
+		//printf("av_audio_fifo_write result = %d\n", result);
+		//int size = av_audio_fifo_size(avFifo);
+		//space = av_audio_fifo_space(avFifo);
+		int offset = 0;
+		while (pkt.size >= 2048)
 		{
 			AACENC_BufDesc outBufDesc = { 0 };
 			AACENC_BufDesc inBufDesc = { 0 };
@@ -441,15 +442,17 @@ static int get_pcm_from_mic() {
 
 			memset(input_buf, 0, input_size);
 			memset(aac_buf, 0, out_size);
-			int ret = av_audio_fifo_read(avFifo, (void**)(&input_buf), 1024);
-		    ret = ret * 2;
-			int nowSize = av_audio_fifo_size(avFifo);
-			printf("nowSize %d\n", nowSize);
-			for (int i = 0; i < ret; i++)
-			{
-				convert_buf[i] = input_buf[i];
-			}
+			//int ret = av_audio_fifo_read(avFifo, (void**)(&input_buf), 1024);
+		    ret = 2048;
+			//int nowSize = av_audio_fifo_size(avFifo);
 
+			for (int i = 0; i < 2048; i++)
+			{
+				convert_buf[i] = *(pkt.data + offset + i);
+			}
+			pkt.size -= 2048;
+			offset = offset + 2048;
+			printf("offset %d. size= %d\n", offset, pkt.size);
 			inargs.numInSamples = ret;
 
 			inBufDesc.numBufs = 1;
@@ -479,7 +482,7 @@ static int get_pcm_from_mic() {
 			}
 		}
 	}
-
+	av_packet_unref(&pkt);//release pkt
 	fclose(wfd);
 	fclose(outfile);
 	avformat_close_input(&fmt_ctx);//releas ctx
