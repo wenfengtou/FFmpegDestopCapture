@@ -128,13 +128,13 @@ static int pcm2aac()
 {
 	HANDLE_AACENCODER aacEncHandle;
 
-	int out_size = 4096;
-	unsigned char aac_buf[4096];
+	int out_size = 2048;
+	unsigned char aac_buf[2048];
 	memset(aac_buf, 0, out_size);
 
-	unsigned char pcm_data[4096];
+	unsigned char pcm_data[2048];
 
-	int channel = 2;
+	int channel = 1;
 	/* 0x01 for AAC module */
 
 	if (aacEncOpen(&aacEncHandle, 0, channel) != AACENC_OK)
@@ -155,7 +155,7 @@ static int pcm2aac()
 	}
 
 	/* 左右声道 */
-	if (aacEncoder_SetParam(aacEncHandle, AACENC_CHANNELMODE, MODE_2) != AACENC_OK)
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_CHANNELMODE, MODE_1) != AACENC_OK)
 	{
 		return -1;
 	}
@@ -166,7 +166,7 @@ static int pcm2aac()
 		return -1;
 	}
 
-	if (aacEncoder_SetParam(aacEncHandle, AACENC_BITRATE, 58000) != AACENC_OK)
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_BITRATE, 38000) != AACENC_OK)
 	{
 		return -1;
 	}
@@ -187,16 +187,11 @@ static int pcm2aac()
 		return -1;
 	}
 
-	if (aacEncInfo(aacEncHandle, &info) != AACENC_OK)
-	{
-		fprintf(stderr, "Unable to get the encoder info\n");
-		return -1;
-	}
 
 	int input_size = channel * 2 * info.frameLength;
 
 	char* input_buf = (char*)malloc(input_size);
-	short* convert_buf = (short*)malloc(input_size);
+	char* convert_buf = (char*)malloc(input_size);
 
 	printf("------ input_size[%d] -----\n", input_size);
 
@@ -211,13 +206,13 @@ static int pcm2aac()
 	void* out_ptr = aac_buf;
 	int out_elem_size = 1;
 
-	FILE* rfd = fopen("Test.pcm", "rb+");
+	FILE* rfd = fopen("test16bitsingle.pcm", "rb+");
 	if (!rfd)
 	{
 		return -1;
 	}
 
-	FILE* wfd = fopen("Test.aac", "wb+");
+	FILE* wfd = fopen("test16bitsingle.aac", "wb+");
 	if (!wfd)
 	{
 		return -1;
@@ -240,16 +235,20 @@ static int pcm2aac()
 		memset(aac_buf, 0, out_size);
 
 		/* 如果输入不是nput_size(4096)byte，则会凑足4096byte才会有输出 */
-		int ret = fread(input_buf, 1, 4096, rfd);
+		int ret = fread(input_buf, 1, 2048, rfd);
 
 		/* 此处用的是16bit采样位数双通道的PCM数据，故将左右声道的低位及高位合并。详见PCM数据格式可知 */
-		for (i = 0; i < ret / 2; i++)
+		//for (i = 0; i < ret / 2; i++)
+		//{
+		//	const char* in = &input_buf[2 * i];
+		//	convert_buf[i] = in[0] | (in[1] << 8);
+		//}
+		for (i = 0; i < ret; i++)
 		{
-			const char* in = &input_buf[2 * i];
-			convert_buf[i] = in[0] | (in[1] << 8);
+			convert_buf[i] = input_buf[i];
 		}
 
-		inargs.numInSamples = ret / 2;
+		inargs.numInSamples = ret;
 
 		inBufDesc.numBufs = 1;
 		inBufDesc.bufs = &in_ptr;
