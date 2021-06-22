@@ -302,6 +302,8 @@ static int get_pcm_from_mic() {
 	av_dict_set(&options, "sample_size", "16", 0);
 	av_dict_set(&options, "channels", "1", 0);
 	av_dict_set(&options, "sample_rate", "44100", 0);
+	av_dict_set(&options, "frame_rate", "25", 0);
+	
 
 	const char* out = "./audio.pcm";
 	FILE* outfile = fopen(out, "wb+");
@@ -317,19 +319,168 @@ static int get_pcm_from_mic() {
 		fprintf(stderr, "Failed to open audio device, [%d]%s\n", ret, errors);
 		return NULL;
 	}
+
+
+	HANDLE_AACENCODER aacEncHandle;
+
+	int out_size = 2048;
+	unsigned char aac_buf[2048];
+	memset(aac_buf, 0, out_size);
+
+	unsigned char pcm_data[2048];
+
+	int channel = 1;
+	/* 0x01 for AAC module */
+
+	if (aacEncOpen(&aacEncHandle, 0, channel) != AACENC_OK)
+	{
+		return -1;
+	}
+
+	/* 设置为AAC LC模式 */
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_AOT, 2) != AACENC_OK)
+	{
+		return -1;
+	}
+
+	/* 设置采样率 */
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_SAMPLERATE, 44100) != AACENC_OK)
+	{
+		return -1;
+	}
+
+	/* 左右声道 */
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_CHANNELMODE, MODE_1) != AACENC_OK)
+	{
+		return -1;
+	}
+
+	/* ADTS输出 */
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_TRANSMUX, TT_MP4_ADTS) != AACENC_OK)
+	{
+		return -1;
+	}
+
+	if (aacEncoder_SetParam(aacEncHandle, AACENC_BITRATE, 38000) != AACENC_OK)
+	{
+		return -1;
+	}
+	//if(aacEncoder_SetParam(aacEncHandle, AACENC_CHANNELORDER, 0) != AACENC_OK )
+	//{
+	//    return -1;
+	//}
+
+	/* 使用NULL来初始化aacEncHandle实例 */
+	if (aacEncEncode(aacEncHandle, NULL, NULL, NULL, NULL) != AACENC_OK)
+	{
+		return -1;
+	}
+
+	AACENC_InfoStruct info = { 0 };
+	if (aacEncInfo(aacEncHandle, &info) != AACENC_OK)
+	{
+		return -1;
+	}
+
+
+	int input_size = channel * 2 * info.frameLength;
+
+	char* input_buf = (char*)malloc(input_size);
+	char* convert_buf = (char*)malloc(input_size);
+
+	printf("------ input_size[%d] -----\n", input_size);
+
+	int in_elem_size = 2; /* 16位采样位数时一个样本2 bytes */
+	int in_identifier = IN_AUDIO_DATA;
+
+	int pcm_buf_size = 0;
+	void* in_ptr = convert_buf;
+	//inargs.numInSamples = pcm_buf_size / 2 ;  /* 16bit 采样位数的样本数计算方法 */
+
+	int out_identifier = OUT_BITSTREAM_DATA;
+	void* out_ptr = aac_buf;
+	int out_elem_size = 1;
+
+
+
+	FILE* wfd = fopen("test16bitsingle.aac", "wb+");
+	if (!wfd)
+	{
+		return -1;
+	}
+
+
+
 	AVPacket pkt;
 	//av_init_packet(&pkt);
 	int count = 0;
+	AVAudioFifo* avFifo = av_audio_fifo_alloc(AV_SAMPLE_FMT_S16P, 1, 1);
 	//read data form audio
-	while (ret = (av_read_frame(fmt_ctx, &pkt)) == 0 && count++ < 40) {
+	while (ret = (av_read_frame(fmt_ctx, &pkt)) == 0 && count++ < 10) {
 		av_log(NULL, AV_LOG_INFO, "pkt size is %d, count=%d\n",
-			pkt.size, pkt.data, count);
-		printf("count = %d\n", count);
+			pkt.size, count);
 		fwrite(pkt.data, 1, pkt.size, outfile);
 		fflush(outfile);
+		//fifo编码
+		int result;
+		result = av_audio_fifo_realloc(avFifo, 2 * pkt.size);
+		printf("av_audio_fifo_realloc result = %d\n", result);
+		int space = av_audio_fifo_space(avFifo);
+		printf("space = %d\n", space);
+		result = av_audio_fifo_write(avFifo, (void**)(&(pkt.data)), pkt.size);
 		av_packet_unref(&pkt);//release pkt
+		printf("av_audio_fifo_write result = %d\n", result);
+		int size = av_audio_fifo_size(avFifo);
+		space = av_audio_fifo_space(avFifo);
+		while (av_audio_fifo_size(avFifo) >= 1024)
+		{
+			AACENC_BufDesc outBufDesc = { 0 };
+			AACENC_BufDesc inBufDesc = { 0 };
+			AACENC_InArgs  inargs = { 0 };
+			AACENC_OutArgs  outargs = { 0 };
+
+			memset(input_buf, 0, input_size);
+			memset(aac_buf, 0, out_size);
+			int ret = av_audio_fifo_read(avFifo, (void**)(&input_buf), 1024);
+		    ret = ret * 2;
+			int nowSize = av_audio_fifo_size(avFifo);
+			printf("nowSize %d\n", nowSize);
+			for (int i = 0; i < ret; i++)
+			{
+				convert_buf[i] = input_buf[i];
+			}
+
+			inargs.numInSamples = ret;
+
+			inBufDesc.numBufs = 1;
+			inBufDesc.bufs = &in_ptr;
+			inBufDesc.bufSizes = &ret;
+			inBufDesc.bufElSizes = &in_elem_size;
+			inBufDesc.bufferIdentifiers = &in_identifier;
+
+			outBufDesc.numBufs = 1;
+			outBufDesc.bufs = &out_ptr;
+			outBufDesc.bufSizes = &out_size;
+			outBufDesc.bufElSizes = &out_elem_size;
+			outBufDesc.bufferIdentifiers = &out_identifier;
+
+			int aac_ret = aacEncEncode(aacEncHandle, &inBufDesc, &outBufDesc, &inargs, &outargs);
+			if (aac_ret != AACENC_OK)
+			{
+				//printf("######### Convert continue aac_ret[%x]#########\n", aac_ret);
+				continue;
+			}
+
+			if (outargs.numOutBytes > 0)
+			{
+				/* success output */
+				fwrite(out_ptr, 1, outargs.numOutBytes, wfd);
+				//printf("######### Convert success #########\n");
+			}
+		}
 	}
 
+	fclose(wfd);
 	fclose(outfile);
 	avformat_close_input(&fmt_ctx);//releas ctx
 
@@ -1165,9 +1316,9 @@ int main()
 		int cc = 10;
 	}
 	//sdl_play();
-	//get_pcm_from_mic();
+	get_pcm_from_mic();
 	//recordMp4();
-	pcm2aac();
+	//pcm2aac();
 	if (true) {
 		return 1;
 	}
