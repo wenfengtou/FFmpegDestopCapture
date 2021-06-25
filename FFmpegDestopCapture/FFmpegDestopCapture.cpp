@@ -1002,6 +1002,104 @@ __FAIL:
 	return ret;
 }
 
+#define MAX_AUDIO_FRAME_SIZE 192000 //48khz 16bit audio 2 channels
+
+int pcm_resample() {
+
+	const char* in_file = "16k.wav";
+
+	AVFormatContext* fctx = NULL;
+	AVCodecContext* cctx = NULL;
+	const AVCodec* acodec = NULL;
+
+	FILE* audio_dst_file1 = fopen("./before_resample.pcm", "wb");
+	FILE* audio_dst_file2 = fopen("./after_resample.pcm", "wb");
+
+	avdevice_register_all();
+	avformat_open_input(&fctx, in_file, NULL, NULL);
+	avformat_find_stream_info(fctx, NULL);
+	//get audio index
+	int aidx = av_find_best_stream(fctx, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+	printf("get aidx[%d]!!!\n", aidx);
+	//open audio codec
+	AVCodecParameters* codecpar = fctx->streams[aidx]->codecpar;
+	acodec = avcodec_find_decoder(codecpar->codec_id);
+	cctx = avcodec_alloc_context3(acodec);
+	avcodec_parameters_to_context(cctx, codecpar);
+	avcodec_open2(cctx, acodec, NULL);
+
+	//init resample
+	int output_channels = 1;
+	int output_rate = 48000;
+	int input_channels = cctx->channels;
+	int input_rate = cctx->sample_rate;
+	AVSampleFormat input_sample_fmt = cctx->sample_fmt;
+	AVSampleFormat output_sample_fmt = AV_SAMPLE_FMT_S16;
+	printf("channels[%d=>%d],rate[%d=>%d],sample_fmt[%d=>%d]\n",
+		input_channels, output_channels, input_rate, output_rate, input_sample_fmt, output_sample_fmt);
+
+	SwrContext* resample_ctx = NULL;
+	resample_ctx = swr_alloc_set_opts(resample_ctx, av_get_default_channel_layout(output_channels), output_sample_fmt, output_rate,
+		av_get_default_channel_layout(input_channels), input_sample_fmt, input_rate, 0, NULL);
+	if (!resample_ctx) {
+		printf("av_audio_resample_init fail!!!\n");
+		return -1;
+	}
+	swr_init(resample_ctx);
+
+	AVPacket* pkt = av_packet_alloc();
+	AVFrame* frame = av_frame_alloc();
+	int size = 0;
+	uint8_t* out_buffer = (uint8_t*)av_malloc(MAX_AUDIO_FRAME_SIZE);
+
+	while (av_read_frame(fctx, pkt) == 0) {//DEMUX
+		if (pkt->stream_index == aidx) {
+			avcodec_send_packet(cctx, pkt);
+			while (1) {
+				int ret = avcodec_receive_frame(cctx, frame);
+				if (ret != 0) {
+					break;
+				}
+				else {
+					//before resample
+					size = frame->nb_samples * av_get_bytes_per_sample((AVSampleFormat)frame->format);
+					if (frame->data[0] != NULL) {
+						fwrite(frame->data[0], 1, size, audio_dst_file1);
+					}
+					size = size * 3;
+					//resample
+					memset(out_buffer, 0x00, sizeof(out_buffer));
+					int out_samples = swr_convert(resample_ctx, &out_buffer, frame->nb_samples * 3, (const uint8_t**)frame->data, frame->nb_samples);
+					if (out_samples > 0) {
+						av_samples_get_buffer_size(NULL, output_channels, out_samples, output_sample_fmt, 1);//out_samples*output_channels*av_get_bytes_per_sample(output_sample_fmt);
+						fwrite(out_buffer, 1, size, audio_dst_file2);
+					}
+				}
+				av_frame_unref(frame);
+			}
+		}
+		else {
+			//printf("not audio frame!!!\n");
+			av_packet_unref(pkt);
+			continue;
+		}
+		av_packet_unref(pkt);
+	}
+
+	//close
+	swr_free(&resample_ctx);
+	av_packet_free(&pkt);
+	av_frame_free(&frame);
+	avcodec_close(cctx);
+	avformat_close_input(&fctx);
+	av_free(out_buffer);
+	fclose(audio_dst_file1);
+	fclose(audio_dst_file2);
+
+	return 0;
+}
+
+
 static int video_decode_example(const char* input_filename)
 {
 	AVFormatContext *avFormatContext = NULL;
@@ -1319,8 +1417,9 @@ int main()
 	if (!i) {
 		int cc = 10;
 	}
+	pcm_resample();
 	//sdl_play();
-	get_pcm_from_mic();
+	//get_pcm_from_mic();
 	//recordMp4();
 	//pcm2aac();
 	if (true) {
