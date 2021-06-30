@@ -123,6 +123,109 @@ char* dup_wchar_to_utf8(wchar_t* w)
 
 }
 
+int record_mp3()
+{
+	avdevice_register_all();
+
+	char inputfile[] = "audio.wav";
+	char outputfile[] = "audio.mp3";
+	int ret = 0;
+	FILE* finput = NULL;
+	FILE* foutput = NULL;
+
+	//======================================MP3收尾工作============================================
+	//寻找mp3编码器
+	const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
+	//创建并配置mp3编(解)码器上下文
+	AVCodecContext* ctx = avcodec_alloc_context3(codec);
+	ctx->bit_rate = 64000;
+	ctx->channels = 2;
+	ctx->channel_layout = AV_CH_LAYOUT_STEREO;
+	ctx->sample_rate = 44100;
+	ctx->sample_fmt = AV_SAMPLE_FMT_S16P;
+	//打开mp3编(解)码器
+	ret = avcodec_open2(ctx, codec, 0);
+	//打开输出的MP3文件流
+	foutput = fopen(outputfile, "wb");
+
+	//===========================================PCM重采样为MP3============================================
+	//准备一个frame结构体来接受重采样MP3的,每一帧的音频数据,每帧的样本大小为1152。
+	//其实就是分配内存缓冲区，放重采样后的数据
+	AVFrame* frame = av_frame_alloc();
+	frame->nb_samples = 1152;
+	frame->channels = 2;
+	frame->channel_layout = AV_CH_LAYOUT_STEREO;
+	frame->format = AV_SAMPLE_FMT_S16P;
+	av_frame_get_buffer(frame, 0);
+	//创建音频重采样上下文
+	SwrContext* swr = swr_alloc();
+	//设置重采样输入参数，通道布局立体声，采样率44100，样本格式不一致,输入S16交错存储，输出S16P平面存储
+	av_opt_set_int(swr, "in_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+	av_opt_set_int(swr, "in_sample_rate", 44100, 0);
+	av_opt_set_sample_fmt(swr, "in_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+	//设置重采样输出参数
+	av_opt_set_int(swr, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+	av_opt_set_int(swr, "out_sample_rate", 44100, 0);
+	av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_S16P, 0);
+	swr_init(swr);
+
+	//===========================================PCM读入处理工作============================================
+	finput = fopen(inputfile, "rb");
+	//存储从pcm文件读取过来的数据，进行缓存
+	uint8_t** input_data = NULL;
+	//缓存重采样之后的数据
+	uint8_t** output_data = NULL;
+	int input_linesize, output_linesize;
+	//给保存pcm文件数据分配空间
+	av_samples_alloc_array_and_samples(&input_data, &input_linesize, 2, 1152, AV_SAMPLE_FMT_S16, 0);
+	//缓存重采样数据的空间分配
+	av_samples_alloc_array_and_samples(&output_data, &output_linesize, 2, 1152, AV_SAMPLE_FMT_S16P, 0);
+	//接受编码之后的数据
+	AVPacket* pkt = av_packet_alloc();
+	while (!feof(finput))
+	{
+		fread(input_data[0], 1, 1152 * 2 * 2, finput);
+		//重采样
+		swr_convert(swr, output_data, 1152, (const uint8_t**)input_data, 1152);
+		//左声道数据
+		frame->data[0] = output_data[0];
+		//右声道数据
+		frame->data[1] = output_data[1];
+		//编码,写入mp3文件，实际上是对frame这个结构体里面的数据进行编码操作。
+		ret = avcodec_send_frame(ctx, frame);
+		while (ret >= 0) {
+			ret = avcodec_receive_packet(ctx, pkt);
+			//AVERROR(EEAGAIN) -11  AVERROR_EOF表示已经没有数据了
+			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+			{
+				continue;
+			}
+			else if (ret < 0) {
+				break;
+			}
+			fwrite(pkt->data, 1, pkt->size, foutput);
+			av_packet_unref(pkt);
+		}
+	}
+	if (input_data)
+	{
+		av_freep(input_data);
+	}
+	if (output_data)
+	{
+		av_freep(output_data);
+	}
+	fclose(finput);
+	fclose(foutput);
+	av_frame_free(&frame);
+	av_packet_free(&pkt);
+
+	swr_free(&swr);
+
+	avcodec_free_context(&ctx);
+
+	return 0;
+}
 
 static int pcm2aac()
 {
@@ -1417,7 +1520,8 @@ int main()
 	if (!i) {
 		int cc = 10;
 	}
-	pcm_resample();
+	record_mp3();
+	//pcm_resample();
 	//sdl_play();
 	//get_pcm_from_mic();
 	//recordMp4();
