@@ -11,6 +11,16 @@ extern "C" {
 #include "libswresample/swresample.h"
 #include "SDL.h"
 }
+
+#include <WINDOWS.H>
+#include <DbgHelp.h>
+
+#pragma comment(lib,"Dbghelp.lib")
+
+LONG WINAPI TopLevelExceptionFilter(
+	struct _EXCEPTION_POINTERS* ExceptionInfo
+);
+
 #define WIN32_LEAN_AND_MEAN             // 从 Windows 头文件中排除极少使用的内容
 // Windows 头文件
 #include <windows.h>
@@ -29,6 +39,49 @@ extern "C" {
 #include <stdlib.h>
 
 
+LONG WINAPI TopLevelExceptionFilter(
+	struct _EXCEPTION_POINTERS* ExceptionInfo
+)
+{
+	printf("Exception Catched, Code = 0x%08X EIP = 0x%p\n",
+		ExceptionInfo->ExceptionRecord->ExceptionCode,
+		ExceptionInfo->ExceptionRecord->ExceptionAddress);
+	printf(".exr = 0x%p\n", ExceptionInfo->ExceptionRecord);
+	printf(".cxr = 0x%p\n", ExceptionInfo->ContextRecord);
+
+	HANDLE hDumpFile = CreateFile(L"Dump.dmp",
+		GENERIC_WRITE,
+		FILE_SHARE_READ,
+		NULL,
+		CREATE_ALWAYS,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL);
+	if (hDumpFile == INVALID_HANDLE_VALUE)
+	{
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+
+	MINIDUMP_EXCEPTION_INFORMATION MinidumpExpInfo;
+	ZeroMemory(&MinidumpExpInfo, sizeof(MINIDUMP_EXCEPTION_INFORMATION));
+	MinidumpExpInfo.ThreadId = GetCurrentThreadId();
+	MinidumpExpInfo.ExceptionPointers = ExceptionInfo;
+	MinidumpExpInfo.ClientPointers = TRUE;
+
+	BOOL bResult = MiniDumpWriteDump(GetCurrentProcess(),
+		GetCurrentProcessId(),
+		hDumpFile,
+		MiniDumpWithProcessThreadData,
+		&MinidumpExpInfo,
+		NULL,
+		NULL
+	);
+
+	printf("Write Dump File %s .\n", bResult ? "Success" : "Failed");
+	CloseHandle(hDumpFile);
+
+	//Dump文件生成完毕，可以结束进程了
+	return EXCEPTION_EXECUTE_HANDLER;
+}
 
 wchar_t* ANSIToUnicode(const char* str)
 {
@@ -1513,6 +1566,11 @@ static LRESULT CALLBACK WinProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lpar
 #undef main
 int main()
 {
+	SetUnhandledExceptionFilter(TopLevelExceptionFilter);
+	int* pValue = NULL;
+	*pValue = 5; //引发内存访问异常
+	return 0;
+
 	printf("ok：%d\n", avcodec_version());
 	//video_decode_example("nature.h264");
 	avdevice_register_all();
