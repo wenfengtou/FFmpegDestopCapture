@@ -1564,12 +1564,9 @@ static LRESULT CALLBACK WinProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lpar
 }
 
 #undef main
-int main()
+int main999()
 {
 	SetUnhandledExceptionFilter(TopLevelExceptionFilter);
-	int* pValue = NULL;
-	*pValue = 5; //引发内存访问异常
-	return 0;
 
 	printf("ok：%d\n", avcodec_version());
 	//video_decode_example("nature.h264");

@@ -1,7 +1,10 @@
-﻿  FFmpegDestopCapture.cpp
-D:\work\vs2019_project\FFmpegDestopCapture\ffmpeg64\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-D:\work\vs2019_project\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(98,6): warning C4101: “i”: 未引用的局部变量
-D:\work\vs2019_project\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(330,16): warning C4101: “avInputFormat”: 未引用的局部变量
-D:\work\vs2019_project\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(676,49): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-D:\work\vs2019_project\FFmpegDestopCapture\FFmpegDestopCapture\FFmpegDestopCapture.cpp(91): warning C4715: “get_pcm_from_mic”: 不是所有的控件路径都返回值
-  FFmpegDestopCapture.vcxproj -> D:\work\vs2019_project\FFmpegDestopCapture\x64\Debug\FFmpegDestopCapture.exe
+﻿  testRtmp.cpp
+D:\work\vcProject\FFmpegDestopCapture\ffmpeg64\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(480,51): warning C4244: “=”: 从“double”转换到“int64_t”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(506,23): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(521,26): warning C4244: “参数”: 从“int64_t”转换到“unsigned int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(600,26): warning C4244: “参数”: 从“int64_t”转换到“unsigned int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(782,24): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(789,69): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(790,63): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
+  FFmpegDestopCapture.vcxproj -> D:\work\vcProject\FFmpegDestopCapture\x64\Debug\FFmpegDestopCapture.exe

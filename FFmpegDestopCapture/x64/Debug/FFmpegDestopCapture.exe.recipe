@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>D:\work\vs2019_project\FFmpegDestopCapture\x64\Debug\FFmpegDestopCapture.exe</FullPath>
+      <FullPath>D:\work\vcProject\FFmpegDestopCapture\x64\Debug\FFmpegDestopCapture.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

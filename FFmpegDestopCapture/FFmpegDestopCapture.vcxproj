@@ -146,6 +146,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FFmpegDestopCapture.cpp" />
+    <ClCompile Include="testRtmp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="testRtmp.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
