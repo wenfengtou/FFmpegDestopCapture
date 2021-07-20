@@ -464,7 +464,7 @@ static int get_pcm_from_mic() {
 	const char* out = "./audio.pcm";
 	FILE* outfile = fopen(out, "wb+");
 	//get format
-	const AVInputFormat* iformat = av_find_input_format("dshow");
+	AVInputFormat* iformat = av_find_input_format("dshow");
 	const char* name = "audio=麦克风 (USB Audio Device)";
 	char* device_name = ANSIToUTF8(name);
 
@@ -677,7 +677,7 @@ static int recordMp4() {
 	avdevice_register_all();
 	avformat_network_init();
 
-	const AVInputFormat* ifmt = av_find_input_format("dshow");
+    AVInputFormat* ifmt = av_find_input_format("dshow");
 
 	if (!ifmt)
 	{
@@ -964,7 +964,7 @@ static int sdl_play() {
 
 	AVDictionary* options = NULL;
 	av_dict_set(&options, "list_devices", "true", 0);
-	const AVInputFormat* ifmt = av_find_input_format("dshow");
+	AVInputFormat* ifmt = av_find_input_format("dshow");
 	pFormatCtx = avformat_alloc_context();
 
 	//av_dict_set(&options, "framerate", "15", 0);//帧lu
@@ -1472,7 +1472,7 @@ static AVFrame* alloc_picture(enum AVPixelFormat pix_fmt, int width, int height)
 
 static int test1() {
 	AVFormatContext* formatCtx = avformat_alloc_context();
-	const AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
+	AVInputFormat* ifmt = av_find_input_format("gdigrab");//设备类型
 	//AVInputFormat *ifmt = av_find_input_format("dshow");//设备类型
 	AVDictionary* options = NULL;
 	//av_dict_set(&options, "video_size","1920*1080",0);//大小  默认全部

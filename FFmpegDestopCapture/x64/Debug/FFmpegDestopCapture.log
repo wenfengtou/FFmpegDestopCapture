@@ -1,10 +1,10 @@
 ﻿  testRtmp.cpp
 D:\work\vcProject\FFmpegDestopCapture\ffmpeg64\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(480,51): warning C4244: “=”: 从“double”转换到“int64_t”，可能丢失数据
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(506,23): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(521,26): warning C4244: “参数”: 从“int64_t”转换到“unsigned int”，可能丢失数据
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(600,26): warning C4244: “参数”: 从“int64_t”转换到“unsigned int”，可能丢失数据
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(782,24): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(789,69): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
-D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(790,63): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(481,51): warning C4244: “=”: 从“double”转换到“int64_t”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(507,23): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(522,26): warning C4244: “参数”: 从“int64_t”转换到“unsigned int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(601,26): warning C4244: “参数”: 从“int64_t”转换到“unsigned int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(783,24): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(790,69): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
+D:\work\vcProject\FFmpegDestopCapture\FFmpegDestopCapture\testRtmp.cpp(791,63): warning C4244: “参数”: 从“int64_t”转换到“int”，可能丢失数据
   FFmpegDestopCapture.vcxproj -> D:\work\vcProject\FFmpegDestopCapture\x64\Debug\FFmpegDestopCapture.exe

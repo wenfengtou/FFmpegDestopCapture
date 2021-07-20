@@ -64,7 +64,7 @@ static char* dup_wchar_to_utf8(const wchar_t* w)
 }
 int OpenVideoCapture()
 {
-	const AVInputFormat* ifmt = av_find_input_format("dshow");
+	AVInputFormat* ifmt = av_find_input_format("dshow");
 
 	//Set own video device's name
 	char* psCameraName = dup_wchar_to_utf8(L"video=USB Video Device");
@@ -120,7 +120,7 @@ int OpenVideoCapture()
 int OpenAudioCapture()
 {
 	//查找输入方式
-	const AVInputFormat* pAudioInputFmt = av_find_input_format("dshow");
+	AVInputFormat* pAudioInputFmt = av_find_input_format("dshow");
 
 	//以Direct Show的方式打开设备，并将 输入方式 关联到格式上下文
 	//char * psDevName = dup_wchar_to_utf8(L"audio=麦克风 (Realtek High Definition Au");
@@ -214,7 +214,8 @@ int OpenOutPut()
 		//video_st->codec = oCodecCtx;
 		*/
 		//set codec context param
-		const AVCodec* tmpCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
+		//const AVCodec* tmpCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
+		const AVCodec* tmpCodec = avcodec_find_encoder_by_name("libx264");
 		if (!tmpCodec) {
 			printf("can not find encoder !\n");
 			return -1;
@@ -233,7 +234,7 @@ int OpenOutPut()
 		videoCodecCtx->time_base.den = 25;
 		videoCodecCtx->framerate = pCodecCtx_Video->framerate;
 		videoCodecCtx->bit_rate = 400000;
-		videoCodecCtx->gop_size = 2;
+		videoCodecCtx->gop_size = 25;
 
 		if (pFormatCtx_Out->oformat->flags & AVFMT_GLOBALHEADER)
 			videoCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -244,7 +245,7 @@ int OpenOutPut()
 
 		//Optional Param  
 		AVDictionary* param = 0;
-		av_dict_set(&param, "preset", "ultrafast", 0);
+		//av_dict_set(&param, "preset", "ultrafast", 0);
 		//解码时花屏，加上有花屏，去掉有延时
 		//av_dict_set(&param, "tune", "zerolatency", 0);
 		//av_dict_set_int(&param, "rtbufsize", 30412800 , 0);
@@ -276,9 +277,9 @@ int OpenOutPut()
 		pAudioStream = avformat_new_stream(pFormatCtx_Out, NULL);
 		//pAudioStream->codec->codec = avcodec_find_encoder(pFormatCtx_Out->oformat->audio_codec);
 		//pAudioStream->codec->codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
-		const AVCodec* tmpCodec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+		//const AVCodec* tmpCodec = avcodec_find_encoder(AV_CODEC_ID_AAC);
 		//AVCodec *tmpCodec = avcodec_find_encoder(pFormatCtx_Out->oformat->audio_codec);
-		//AVCodec *tmpCodec = avcodec_find_encoder_by_name("libfdk_aac");
+		const AVCodec *tmpCodec = avcodec_find_encoder_by_name("libfdk_aac");
 		//AVCodec *tmpCodec = avcodec_find_encoder_by_name("libvo_aacenc");
 		if (!tmpCodec)
 		{
@@ -298,7 +299,7 @@ int OpenOutPut()
 		pOutputCodecCtx->sample_fmt = tmpCodec->sample_fmts[0];
 		pOutputCodecCtx->bit_rate = OUTPUT_BIT_RATE;
 
-		//pOutputCodecCtx->profile = FF_PROFILE_AAC_MAIN;
+		pOutputCodecCtx->profile = FF_PROFILE_AAC_LD;
 		pOutputCodecCtx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
 
 		AVRational time_base = { 1, pOutputCodecCtx->sample_rate };
