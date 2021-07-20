@@ -456,6 +456,7 @@ int main()
 		if (av_compare_ts(cur_pts_v, pFormatCtx_Out->streams[VideoIndex]->time_base,
 			cur_pts_a, pFormatCtx_Out->streams[AudioIndex]->time_base) <= 0)
 		{
+			printf("write video!!!!!!!!!!!!!!!!!!!,pts %lld, index %lld\n", cur_pts_v, VideoFrameIndex);
 			//read data from fifo
 			if (av_fifo_size(fifo_video) < frame_size && !bCap)
 			{
@@ -498,6 +499,7 @@ int main()
 				if (ret < 0)
 				{
 					//编码错误,不理会此帧
+					printf("vidoe encode fail!!\n");
 					continue;
 				}
 				got_picture = avcodec_receive_packet(videoCodecCtx, pkt);
@@ -516,7 +518,7 @@ int main()
 
 					AVRational time_base = pFormatCtx_Video->streams[0]->time_base;
 					//AVRational time_base_q = { 1,AV_TIME_BASE };
-					int64_t pts_time = av_rescale_q(pkt->dts, time_base, time_base_q);
+					int64_t pts_time = av_rescale_q(pkt->pts, time_base, time_base_q);
 					int64_t now_time = av_gettime() - start_time;
 					if (pts_time > now_time)
 						av_usleep(pts_time - now_time);
@@ -529,11 +531,16 @@ int main()
 					av_packet_unref(pkt);
 					VideoFrameIndex++;
 				}
+				else
+				{
+					printf("video got_picture fail!!\n");
+				}
 
 			}
 		}
 		else
 		{
+			printf("write Audio, pts= %lld !\n", cur_pts_a);
 			if (NULL == fifo_audio)
 			{
 				continue;//还未初始化fifo
@@ -597,6 +604,7 @@ int main()
 					AVRational time_base_q = { 1,AV_TIME_BASE };
 					int64_t pts_time = av_rescale_q(pkt_out->dts, time_base, time_base_q);
 					int64_t now_time = av_gettime() - start_time;
+					//printf("audio now is %lld, pts is %lld\n", now_time, pts_time);
 					if (pts_time > now_time)
 						av_usleep(pts_time - now_time);
 
@@ -747,7 +755,7 @@ DWORD WINAPI AudioCapThreadProc(LPVOID lpParam)
 		if (NULL == fifo_audio)
 		{
 			fifo_audio = av_audio_fifo_alloc(pOutputCodecCtx->sample_fmt,
-				pFormatCtx_Audio->streams[0]->codecpar->channels, 30 * frame->nb_samples);
+				pFormatCtx_Audio->streams[0]->codecpar->channels, 300 * frame->nb_samples);
 		}
 
 		if (pOutputCodecCtx->sample_fmt != pCodecCtx_Audio->sample_fmt
